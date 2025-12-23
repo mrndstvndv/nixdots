@@ -1,10 +1,14 @@
-{ pkgs, ... }:
+{ pkgs, nixpkgs, ... }:
 {
+  nixpkgs.config.allowUnfree = true;
+
   home.packages = [
     pkgs.bun
     pkgs.lazygit
     pkgs.gh
     pkgs.git
+		pkgs.daisydisk
+ 		pkgs.raycast
   ];
 
   home.sessionPath = [

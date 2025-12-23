@@ -13,7 +13,7 @@
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager}:
    let
-      configuration = { pkgs, zen, home-manager, ... }:
+      configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
          zenWithPolicies =
            pkgs.wrapFirefox
@@ -38,7 +38,6 @@
           # $ nix-env -qaP | grep wget
           environment.systemPackages =
            [
- 	pkgs.raycast
  	zenWithPolicies
            ];
 
@@ -56,8 +55,6 @@
       # Used for backwards compatibility, please read the changelog before changing.
       # $ darwin-rebuild changelog
       system.stateVersion = 6;
-
-      nixpkgs.config.allowUnfree = true;
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
