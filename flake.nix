@@ -10,9 +10,15 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
+    nix-on-droid = {
+      url = "github:nix-community/nix-on-droid/release-24.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+      # Reuse our home-manager input inside nix-on-droid
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, nix-on-droid }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
@@ -34,8 +40,13 @@
             name = "steven";
             home = "/Users/steven";
           };
-           home-manager.extraSpecialArgs = { inherit (inputs) my-neovim; };
-           home-manager.users.steven = import ./home-manager.nix;
+          home-manager.extraSpecialArgs = { inherit (inputs) my-neovim; };
+          home-manager.users.steven = {
+            imports = [
+              ./home-manager.nix
+              ./darwin/home.nix
+            ];
+          };
           # List packages installed in system profile. To search by name, run:
           # $ nix-env -qaP | grep wget
           environment.systemPackages =
@@ -65,9 +76,21 @@
   {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Stevens-Mac-mini
-      darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
-        specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim; };
-        modules = [ configuration ];
-      };
+    darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
+      specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim; };
+      modules = [ configuration ];
+    };
+
+    # Nix-on-Droid configuration. Home Manager is wired through
+    # nix-on-droid itself (see nix-on-droid/system.nix).
+    nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
+      pkgs = import nixpkgs { system = "aarch64-linux"; };
+      modules = [
+        # Inject flake input my-neovim into _module.args, so all
+        # nix-on-droid modules (including HM) can see it.
+        { _module.args.my-neovim = my-neovim; }
+        ./nix-on-droid/system.nix
+      ];
+    };
   };
 }
