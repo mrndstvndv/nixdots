@@ -18,6 +18,33 @@
     enable = true;
     defaultEditor = true;
     extraConfig = ''
+    set number relativenumber
+
+    set undofile
+
+    set ignorecase
+    set smartcase
+
+    set signcolumn=auto
+
+    set cursorline
+
+    set shiftwidth=2
+    set tabstop=2
+
+     set hlsearch
+		nnoremap <Esc> :nohlsearch<CR>
+
+		" tabs
+		nnoremap <C-k> :tabnext +1<CR>
+		tnoremap <C-k> :tabnext +1<CR>
+
+		nnoremap <C-j> :tabnext -1<CR>
+		tnoremap <C-j> :tabnext -1<CR>
+
+		nnoremap <leader>nt :tabnew<CR>
+
+		nnoremap <leader>ntt :tabnew<CR>:terminal<CR>:startinsert<CR>
     '';
   };
 
