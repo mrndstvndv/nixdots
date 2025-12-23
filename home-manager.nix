@@ -1,8 +1,9 @@
-{ pkgs, nixpkgs, ... }:
+{ pkgs, nixpkgs, my-neovim, ... }:
 {
   nixpkgs.config.allowUnfree = true;
 
   home.packages = [
+    my-neovim.packages.${pkgs.system}.default
     pkgs.bun
     pkgs.lazygit
     pkgs.gh
@@ -17,44 +18,6 @@
 
   programs.zoxide.enable = true;
   programs.zoxide.enableFishIntegration = true;
-
-  programs.neovim = {
-    enable = true;
-    defaultEditor = true;
-    extraConfig = ''
-    " Set <space> as the leader key
-    let mapleader = " "
-    let maplocalleader = " "
-
-    set number relativenumber
-
-    set undofile
-
-    set ignorecase
-    set smartcase
-
-    set signcolumn=auto
-
-    set cursorline
-
-    set shiftwidth=2
-    set tabstop=2
-
-     set hlsearch
-		nnoremap <Esc> :nohlsearch<CR>
-
-		" tabs
-		nnoremap <C-k> :tabnext +1<CR>
-		tnoremap <C-k> :tabnext +1<CR>
-
-		nnoremap <C-j> :tabnext -1<CR>
-		tnoremap <C-j> :tabnext -1<CR>
-
-		nnoremap <leader>nt :tabnew<CR>
-
-		nnoremap <leader>ntt :tabnew<CR>:terminal<CR>:startinsert<CR>
-    '';
-  };
 
   programs.aerospace = {
     enable = true;

@@ -9,6 +9,7 @@
     zen.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    my-neovim.url = "github:crimera/nvim.config";
   };
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager}:
@@ -64,7 +65,7 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Stevens-Mac-mini
       darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
-        specialArgs = { inherit zen home-manager; };
+        specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim; };
         modules = [ configuration ];
       };
   };
