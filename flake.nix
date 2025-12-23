@@ -7,11 +7,13 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     zen.url = "github:0xc000022070/zen-browser-flake";
     zen.inputs.nixpkgs.follows = "nixpkgs";
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, zen}:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager}:
    let
-     configuration = { pkgs, zen, ... }:
+      configuration = { pkgs, zen, home-manager, ... }:
        let
          zenWithPolicies =
            pkgs.wrapFirefox
@@ -25,28 +27,41 @@
                icon = "zen-browser";
              };
        in
-       {
-         # List packages installed in system profile. To search by name, run:
-         # $ nix-env -qaP | grep wget
-         environment.systemPackages =
+        {
+          imports = [ inputs.home-manager.darwinModules.home-manager ];
+          users.users.steven = {
+            name = "steven";
+            home = "/Users/steven";
+          };
+          home-manager.users.steven = { pkgs, ... }: {
+            home.packages = [
+	      pkgs.neovim
+	      pkgs.bun
+	      pkgs.lazygit
+	      pkgs.gh
+	      pkgs.git
+	    ];
+
+	    home.sessionPath = [
+	      "/Users/steven/.bun/bin"
+	    ];
+
+            programs.zsh.enable = true;
+            home.stateVersion = "26.05";
+          };
+          # List packages installed in system profile. To search by name, run:
+          # $ nix-env -qaP | grep wget
+          environment.systemPackages =
            [
- 	pkgs.neovim
  	pkgs.ghostty-bin
  	pkgs.aerospace
  	pkgs.raycast
- 	pkgs.bun
- 	pkgs.lazygit
- 	pkgs.gh
- 	pkgs.git
  	zenWithPolicies
            ];
 
 
       programs.zsh = {
         enable = true;
-	shellInit = ''
-	  export PATH="/Users/steven/.bun/bin:$PATH"
-	'';
       };
 
       programs.tmux = {
@@ -119,9 +134,9 @@
   {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Stevens-Mac-mini
-     darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
-       specialArgs = { inherit zen; };
-       modules = [ configuration ];
-     };
+      darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
+        specialArgs = { inherit zen home-manager; };
+        modules = [ configuration ];
+      };
   };
 }
