@@ -12,7 +12,7 @@
     my-neovim.url = "github:crimera/nvim.config";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager}:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
@@ -34,6 +34,7 @@
             name = "steven";
             home = "/Users/steven";
           };
+           home-manager.extraSpecialArgs = { inherit (inputs) my-neovim; };
            home-manager.users.steven = import ./home-manager.nix;
           # List packages installed in system profile. To search by name, run:
           # $ nix-env -qaP | grep wget
