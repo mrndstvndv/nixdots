@@ -38,7 +38,6 @@
           # $ nix-env -qaP | grep wget
           environment.systemPackages =
            [
- 	pkgs.aerospace
  	pkgs.raycast
  	zenWithPolicies
            ];
