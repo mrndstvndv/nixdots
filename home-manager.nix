@@ -6,12 +6,14 @@
     pkgs.lazygit
     pkgs.gh
     pkgs.git
-    pkgs.zoxide
   ];
 
   home.sessionPath = [
     "/Users/steven/.bun/bin"
   ];
+
+  programs.zoxide.enable = true;
+  programs.zoxide.enableFishIntegration = true;
 
   programs.aerospace = {
     enable = true;
@@ -47,12 +49,12 @@
     };
   };
 
-  programs.zsh.enable = true;
+  programs.fish.enable = true;
 
   programs.ghostty = {
     enable = true;
     package = if pkgs.stdenv.isDarwin then pkgs.ghostty-bin else pkgs.ghostty;
-    enableZshIntegration = true;
+    enableFishIntegration = true;
 
     settings = {
       command = "${pkgs.tmux}/bin/tmux new -As0";
@@ -89,7 +91,7 @@
 
       set -g status-right "#($HOME/.local/bin/tmux_status.sh)"
 
-      set-option -g default-shell /opt/homebrew/bin/fish
+       set-option -g default-shell "${pkgs.fish}/bin/fish"
 
       # toggle opencode pane in current directory
       bind-key o run-shell "~/.local/bin/toggle_opencode.sh"
