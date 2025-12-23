@@ -53,7 +53,16 @@
     };
   };
 
-  programs.fish.enable = true;
+  programs.fish = {
+    enable = true;
+    interactiveShellInit = ''
+      # Source nix-darwin environment if not already done
+      if test -z "$__NIX_DARWIN_SET_ENVIRONMENT_DONE"
+        fish_add_path --prepend /run/current-system/sw/bin
+        fish_add_path --prepend $HOME/.nix-profile/bin
+      end
+    '';
+  };
 
   programs.ghostty = {
     enable = true;
@@ -61,8 +70,7 @@
     enableFishIntegration = true;
 
     settings = {
-      command = "${pkgs.tmux}/bin/tmux new -As0";
-
+      command = "${pkgs.fish}/bin/fish --login -c '${pkgs.tmux}/bin/tmux new -As0'";
       background-opacity = "0.9";
       background-blur = true;
 
