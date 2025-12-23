@@ -1,4 +1,9 @@
-{ pkgs, nixpkgs, my-neovim, ... }:
+{
+  pkgs,
+  nixpkgs,
+  my-neovim,
+  ...
+}:
 {
   nixpkgs.config.allowUnfree = true;
 
@@ -8,8 +13,8 @@
     pkgs.lazygit
     pkgs.gh
     pkgs.git
-		pkgs.daisydisk
- 		pkgs.raycast
+    pkgs.daisydisk
+    pkgs.raycast
   ];
 
   home.sessionPath = [
@@ -28,27 +33,30 @@
       mode.main.binding = {
         alt-enter = ''exec-and-forget open -a "/Users/steven/Applications/Home Manager Apps/Ghostty.app"'';
 
-	alt-1 = "workspace 1";
-	alt-2 = "workspace 2";
-	alt-3 = "workspace 3";
-	alt-4 = "workspace 4";
+        alt-1 = "workspace 1";
+        alt-2 = "workspace 2";
+        alt-3 = "workspace 3";
+        alt-4 = "workspace 4";
 
-	alt-shift-1 = "move-node-to-workspace 1";
-	alt-shift-2 = "move-node-to-workspace 2";
-	alt-shift-3 = "move-node-to-workspace 3";
-	alt-shift-4 = "move-node-to-workspace 4";
+        alt-shift-1 = "move-node-to-workspace 1";
+        alt-shift-2 = "move-node-to-workspace 2";
+        alt-shift-3 = "move-node-to-workspace 3";
+        alt-shift-4 = "move-node-to-workspace 4";
 
-	alt-h = "focus left";
-	alt-j = "focus down";
-	alt-k = "focus up";
-	alt-l = "focus right";
+        alt-h = "focus left";
+        alt-j = "focus down";
+        alt-k = "focus up";
+        alt-l = "focus right";
 
-	alt-shift-semicolon = "mode service";
+        alt-shift-semicolon = "mode service";
       };
       mode.service.binding = {
-        esc = ["reload-config" "mode main"];
-	down = "volume down";
-	up = "volume up";
+        esc = [
+          "reload-config"
+          "mode main"
+        ];
+        down = "volume down";
+        up = "volume up";
       };
     };
   };
@@ -60,6 +68,29 @@
       if test -z "$__NIX_DARWIN_SET_ENVIRONMENT_DONE"
         fish_add_path --prepend /run/current-system/sw/bin
         fish_add_path --prepend $HOME/.nix-profile/bin
+
+        # Use external storage on macOS if available
+        if test (uname) = Darwin; and test -d "/Volumes/realme"
+            set --export UV_CACHE_DIR "/Volumes/realme/.cache/uv"
+            set --export GRADLE_USER_HOME "/Volumes/realme/.gradle"
+        end
+
+        fish_vi_key_bindings
+        bind -M insert \cr history-pager
+        # Emulates vim's cursor shape behavior
+        # Set the normal and visual mode cursors to a block
+        set fish_cursor_default block
+        # Set the insert mode cursor to a line
+        set fish_cursor_insert line
+        # Set the replace mode cursors to an underscore
+        set fish_cursor_replace_one underscore
+        set fish_cursor_replace underscore
+        # Set the external cursor to a line. The external cursor appears when a command is started.
+        # The cursor shape takes the value of fish_cursor_default when fish_cursor_external is not specified.
+        set fish_cursor_external line
+        # The following variable can be used to configure cursor shape in
+        # visual mode, but due to fish_cursor_default, is redundant here
+        set fish_cursor_visual block
       end
     '';
   };
