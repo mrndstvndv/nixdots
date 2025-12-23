@@ -15,6 +15,7 @@
     pkgs.git
     pkgs.daisydisk
     pkgs.raycast
+    pkgs.cursor-cli
   ];
 
   home.sessionPath = [
