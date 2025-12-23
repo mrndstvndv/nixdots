@@ -10,21 +10,37 @@
   };
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, zen}:
-  let
-    configuration = { pkgs, ... }: {
-      # List packages installed in system profile. To search by name, run:
-      # $ nix-env -qaP | grep wget
-      environment.systemPackages =
-        [ 
-	pkgs.neovim
-	pkgs.ghostty-bin
-	pkgs.aerospace
-	pkgs.raycast
-	pkgs.bun
-	pkgs.lazygit
-	pkgs.gh
-	pkgs.git
-        ];
+   let
+     configuration = { pkgs, zen, ... }:
+       let
+         zenWithPolicies =
+           pkgs.wrapFirefox
+             (zen.packages.aarch64-darwin.beta-unwrapped.override {
+               policies = {
+                 DisableAppUpdate = true;
+                 DisableTelemetry = true;
+               };
+             })
+             {
+               icon = "zen-browser";
+             };
+       in
+       {
+         # List packages installed in system profile. To search by name, run:
+         # $ nix-env -qaP | grep wget
+         environment.systemPackages =
+           [
+ 	pkgs.neovim
+ 	pkgs.ghostty-bin
+ 	pkgs.aerospace
+ 	pkgs.raycast
+ 	pkgs.bun
+ 	pkgs.lazygit
+ 	pkgs.gh
+ 	pkgs.git
+ 	zenWithPolicies
+           ];
+
 
       programs.zsh = {
         enable = true;
@@ -103,8 +119,9 @@
   {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Stevens-Mac-mini
-    darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration ];
-    };
+     darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
+       specialArgs = { inherit zen; };
+       modules = [ configuration ];
+     };
   };
 }
