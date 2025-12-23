@@ -8,7 +8,7 @@
   nixpkgs.config.allowUnfree = true;
 
   home.packages = [
-    my-neovim.packages.${pkgs.system}.default
+    my-neovim.packages.${pkgs.stdenv.hostPlatform.system}.default
     pkgs.bun
     pkgs.lazygit
     pkgs.gh
