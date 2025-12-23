@@ -1,7 +1,6 @@
 { pkgs, ... }:
 {
   home.packages = [
-    pkgs.neovim
     pkgs.bun
     pkgs.lazygit
     pkgs.gh
@@ -14,6 +13,13 @@
 
   programs.zoxide.enable = true;
   programs.zoxide.enableFishIntegration = true;
+
+  programs.neovim = {
+    enable = true;
+    defaultEditor = true;
+    extraConfig = ''
+    '';
+  };
 
   programs.aerospace = {
     enable = true;
