@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 {
   home.packages = [
     pkgs.bun
@@ -10,6 +10,6 @@
 
   # Common PATH additions
   home.sessionPath = [
-    "/Users/steven/.bun/bin"
+    "${config.home.homeDirectory}/.bun/bin"
   ];
 }
