@@ -21,4 +21,9 @@
 
   # Sync homebrew.taps with nix-homebrew.taps to avoid mismatches
   homebrew.taps = builtins.attrNames config.nix-homebrew.taps;
+
+  # Install OrbStack via Homebrew
+  homebrew.casks = [
+    "orbstack"
+  ];
 }
