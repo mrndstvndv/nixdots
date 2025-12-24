@@ -12,6 +12,7 @@
         if test (uname) = Darwin; and test -d "/Volumes/realme"
             set --export UV_CACHE_DIR "/Volumes/realme/.cache/uv"
             set --export GRADLE_USER_HOME "/Volumes/realme/.gradle"
+            set --export BUN_INSTALL "/Volumes/realme/.bun"
         end
 
         fish_vi_key_bindings
