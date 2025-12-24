@@ -10,6 +10,16 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
+    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    nix-homebrew.inputs.nixpkgs.follows = "nixpkgs";
+    homebrew-core = {
+      url = "github:homebrew/homebrew-core";
+      flake = false;
+    };
+    homebrew-cask = {
+      url = "github:homebrew/homebrew-cask";
+      flake = false;
+    };
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -18,7 +28,7 @@
     };
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, nix-on-droid }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, nix-homebrew, homebrew-core, homebrew-cask, nix-on-droid }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
@@ -77,8 +87,12 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Stevens-Mac-mini
     darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim; };
-      modules = [ configuration ];
+      specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim homebrew-nix homebrew-core homebrew-cask; };
+      modules = [ 
+        inputs.nix-homebrew.darwinModules.nix-homebrew
+        ./modules/nix-homebrew.nix
+        configuration 
+      ];
     };
 
     # Nix-on-Droid configuration. Home Manager is wired through
