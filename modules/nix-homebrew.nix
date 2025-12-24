@@ -19,11 +19,28 @@
     mutableTaps = false;
   };
 
-  # Sync homebrew.taps with nix-homebrew.taps to avoid mismatches
-  homebrew.taps = builtins.attrNames config.nix-homebrew.taps;
+  # Homebrew configuration
+  homebrew = {
+    # Enable the homebrew module
+    enable = true;
 
-  # Install OrbStack via Homebrew
-  homebrew.casks = [
-    "orbstack"
-  ];
+    # User owning the Homebrew installation
+    user = "steven";
+
+    # Sync taps with nix-homebrew.taps to avoid mismatches
+    taps = builtins.attrNames config.nix-homebrew.taps;
+
+    # Lifecycle automation
+    onActivation = {
+      autoUpdate = true;        # Update Homebrew itself on rebuild
+      upgrade = true;           # Upgrade installed packages on rebuild
+      cleanup = "uninstall";    # Remove untracked packages on rebuild
+    };
+
+    # Install OrbStack via Homebrew
+    # OrbStack is pinned by default (no greedy/auto-updates)
+    casks = [
+      "orbstack"
+    ];
+  };
 }
