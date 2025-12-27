@@ -8,12 +8,13 @@
           fish_add_path --prepend /run/current-system/sw.bin
           fish_add_path --prepend $HOME/.nix-profile/bin
 
-          # Use external storage on macOS if available
-          if test (uname) = Darwin; and test -d "/Volumes/realme"
-              set --export UV_CACHE_DIR "/Volumes/realme/.cache/uv"
-              set --export GRADLE_USER_HOME "/Volumes/realme/.gradle"
-              set --export BUN_INSTALL "/Volumes/realme/.bun"
-          end
+           # Use external storage on macOS if available
+           if test (uname) = Darwin; and test -d "/Volumes/realme"
+               set --export UV_CACHE_DIR "/Volumes/realme/.cache/uv"
+               set --export GRADLE_USER_HOME "/Volumes/realme/.gradle"
+               set --export BUN_INSTALL "/Volumes/realme/.bun"
+               fish_add_path --prepend "/Volumes/realme/.bun/bin"
+           end
 
           fish_vi_key_bindings
           bind -M insert \cr history-pager
