@@ -5,8 +5,15 @@
     pkgs.lazygit
     pkgs.gh
     pkgs.git
+    pkgs.uv
     pkgs.cursor-cli
+    pkgs.mpv
   ];
+
+  programs.direnv = {
+    enable = true;
+    silent = true;
+  };
 
   # Common PATH additions
   home.sessionPath = [

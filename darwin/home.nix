@@ -58,7 +58,7 @@
       window-padding-color = "extend";
       window-decoration = false;
 
-      font-size = 16;
+      font-size = 18;
     };
   };
 }
