@@ -8,6 +8,7 @@
     pkgs.uv
     pkgs.cursor-cli
     pkgs.mpv
+    pkgs.ffmpeg
   ];
 
   programs.direnv = {
