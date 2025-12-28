@@ -85,8 +85,8 @@
   in
   {
     # Build darwin flake using:
-    # $ darwin-rebuild build --flake .#Stevens-Mac-mini
-    darwinConfigurations."Stevens-Mac-mini" = nix-darwin.lib.darwinSystem {
+    # $ darwin-rebuild build --flake .#proputer
+    darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
       specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim homebrew-nix homebrew-core homebrew-cask; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew

@@ -45,7 +45,7 @@
 
           if test $status -eq 0
             echo "Rebuilding configuration"
-            sudo darwin-rebuild switch --flake .#Stevens-Mac-mini
+            sudo darwin-rebuild switch --flake .#proputer
           else
             echo "flake update failed; rebuild skipped"
           end
