@@ -20,6 +20,7 @@
       set -g status-right "#($HOME/.local/bin/tmux_status.sh)"
 
       set-option -g default-shell "${pkgs.fish}/bin/fish"
+      set-option -g default-command "${pkgs.fish}/bin/fish -i"
 
       # toggle opencode pane in current directory
       bind-key o run-shell "~/.local/bin/toggle_opencode.sh"
