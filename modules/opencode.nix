@@ -2,7 +2,7 @@
 {
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
-    theme = "transparent";
+    theme = "gruvbox-transparent";
     plugin = [
       "opencode-google-antigravity-auth"
       "opencode-supermemory@latest"
@@ -33,249 +33,96 @@
     };
     default_agent = "plan";
   };
-  home.file.".config/opencode/themes/transparent.json".text = builtins.toJSON {
+  home.file.".config/opencode/themes/gruvbox-transparent.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/theme.json";
     defs = {
-      darkStep1 = "#0a0a0a";
-      darkStep2 = "#141414";
-      darkStep3 = "#1e1e1e";
-      darkStep4 = "#282828";
-      darkStep5 = "#323232";
-      darkStep6 = "#3c3c3c";
-      darkStep7 = "#484848";
-      darkStep8 = "#606060";
-      darkStep9 = "#fab283";
-      darkStep10 = "#ffc09f";
-      darkStep11 = "#808080";
-      darkStep12 = "#eeeeee";
-      darkSecondary = "#5c9cf5";
-      darkAccent = "#9d7cd8";
-      darkRed = "#e06c75";
-      darkOrange = "#f5a742";
-      darkGreen = "#7fd88f";
-      darkCyan = "#56b6c2";
-      darkYellow = "#e5c07b";
-      lightStep1 = "#ffffff";
-      lightStep2 = "#fafafa";
-      lightStep3 = "#f5f5f5";
-      lightStep4 = "#ebebeb";
-      lightStep5 = "#e1e1e1";
-      lightStep6 = "#d4d4d4";
-      lightStep7 = "#b8b8b8";
-      lightStep8 = "#a0a0a0";
-      lightStep9 = "#3b7dd8";
-      lightStep10 = "#2968c3";
-      lightStep11 = "#8a8a8a";
-      lightStep12 = "#1a1a1a";
-      lightSecondary = "#7b5bb6";
-      lightAccent = "#d68c27";
-      lightRed = "#d1383d";
-      lightOrange = "#d68c27";
-      lightGreen = "#3d9a57";
-      lightCyan = "#318795";
-      lightYellow = "#b0851f";
+      darkBg0 = "transparent";
+      darkBg1 = "transparent";
+      darkBg2 = "transparent";
+      darkBg3 = "#665c54";
+      darkFg0 = "#fbf1c7";
+      darkFg1 = "#ebdbb2";
+      darkGray = "#928374";
+      darkRed = "#cc241d";
+      darkGreen = "#98971a";
+      darkYellow = "#d79921";
+      darkBlue = "#458588";
+      darkPurple = "#b16286";
+      darkAqua = "#689d6a";
+      darkOrange = "#d65d0e";
+      darkRedBright = "#fb4934";
+      darkGreenBright = "#b8bb26";
+      darkYellowBright = "#fabd2f";
+      darkBlueBright = "#83a598";
+      darkPurpleBright = "#d3869b";
+      darkAquaBright = "#8ec07c";
+      darkOrangeBright = "#fe8019";
+      lightBg0 = "transparent";
+      lightBg1 = "transparent";
+      lightBg2 = "transparent";
+      lightBg3 = "#bdae93";
+      lightFg0 = "#282828";
+      lightFg1 = "#3c3836";
+      lightGray = "#7c6f64";
+      lightRed = "#9d0006";
+      lightGreen = "#79740e";
+      lightYellow = "#b57614";
+      lightBlue = "#076678";
+      lightPurple = "#8f3f71";
+      lightAqua = "#427b58";
+      lightOrange = "#af3a03";
     };
     theme = {
-      primary = {
-        dark = "darkStep9";
-        light = "lightStep9";
-      };
-      secondary = {
-        dark = "darkSecondary";
-        light = "lightSecondary";
-      };
-      accent = {
-        dark = "darkAccent";
-        light = "lightAccent";
-      };
-      error = {
-        dark = "darkRed";
-        light = "lightRed";
-      };
-      warning = {
-        dark = "darkOrange";
-        light = "lightOrange";
-      };
-      success = {
-        dark = "darkGreen";
-        light = "lightGreen";
-      };
-      info = {
-        dark = "darkCyan";
-        light = "lightCyan";
-      };
-      text = {
-        dark = "darkStep12";
-        light = "lightStep12";
-      };
-      textMuted = {
-        dark = "darkStep11";
-        light = "lightStep11";
-      };
-      background = {
-        dark = "transparent";
-        light = "transparent";
-      };
-      backgroundPanel = {
-        dark = "transparent";
-        light = "transparent";
-      };
-      backgroundElement = {
-        dark = "transparent";
-        light = "transparent";
-      };
-      border = {
-        dark = "darkStep7";
-        light = "lightStep7";
-      };
-      borderActive = {
-        dark = "darkStep8";
-        light = "lightStep8";
-      };
-      borderSubtle = {
-        dark = "darkStep6";
-        light = "lightStep6";
-      };
-      diffAdded = {
-        dark = "#4fd6be";
-        light = "#1e725c";
-      };
-      diffRemoved = {
-        dark = "#c53b53";
-        light = "#c53b53";
-      };
-      diffContext = {
-        dark = "#828bb8";
-        light = "#7086b5";
-      };
-      diffHunkHeader = {
-        dark = "#828bb8";
-        light = "#7086b5";
-      };
-      diffHighlightAdded = {
-        dark = "#b8db87";
-        light = "#4db380";
-      };
-      diffHighlightRemoved = {
-        dark = "#e26a75";
-        light = "#f52a65";
-      };
-      diffAddedBg = {
-        dark = "#20303b";
-        light = "#d5e5d5";
-      };
-      diffRemovedBg = {
-        dark = "#37222c";
-        light = "#f7d8db";
-      };
-      diffContextBg = {
-        dark = "transparent";
-        light = "transparent";
-      };
-      diffLineNumber = {
-        dark = "darkStep3";
-        light = "lightStep3";
-      };
-      diffAddedLineNumberBg = {
-        dark = "#1b2b34";
-        light = "#c5d5c5";
-      };
-      diffRemovedLineNumberBg = {
-        dark = "#2d1f26";
-        light = "#e7c8cb";
-      };
-      markdownText = {
-        dark = "darkStep12";
-        light = "lightStep12";
-      };
-      markdownHeading = {
-        dark = "darkAccent";
-        light = "lightAccent";
-      };
-      markdownLink = {
-        dark = "darkStep9";
-        light = "lightStep9";
-      };
-      markdownLinkText = {
-        dark = "darkCyan";
-        light = "lightCyan";
-      };
-      markdownCode = {
-        dark = "darkGreen";
-        light = "lightGreen";
-      };
-      markdownBlockQuote = {
-        dark = "darkYellow";
-        light = "lightYellow";
-      };
-      markdownEmph = {
-        dark = "darkYellow";
-        light = "lightYellow";
-      };
-      markdownStrong = {
-        dark = "darkOrange";
-        light = "lightOrange";
-      };
-      markdownHorizontalRule = {
-        dark = "darkStep11";
-        light = "lightStep11";
-      };
-      markdownListItem = {
-        dark = "darkStep9";
-        light = "lightStep9";
-      };
-      markdownListEnumeration = {
-        dark = "darkCyan";
-        light = "lightCyan";
-      };
-      markdownImage = {
-        dark = "darkStep9";
-        light = "lightStep9";
-      };
-      markdownImageText = {
-        dark = "darkCyan";
-        light = "lightCyan";
-      };
-      markdownCodeBlock = {
-        dark = "transparent";
-        light = "transparent";
-      };
-      syntaxComment = {
-        dark = "darkStep11";
-        light = "lightStep11";
-      };
-      syntaxKeyword = {
-        dark = "darkAccent";
-        light = "lightAccent";
-      };
-      syntaxFunction = {
-        dark = "darkStep9";
-        light = "lightStep9";
-      };
-      syntaxVariable = {
-        dark = "darkRed";
-        light = "lightRed";
-      };
-      syntaxString = {
-        dark = "darkGreen";
-        light = "lightGreen";
-      };
-      syntaxNumber = {
-        dark = "darkOrange";
-        light = "lightOrange";
-      };
-      syntaxType = {
-        dark = "darkYellow";
-        light = "lightYellow";
-      };
-      syntaxOperator = {
-        dark = "darkCyan";
-        light = "lightCyan";
-      };
-      syntaxPunctuation = {
-        dark = "darkStep12";
-        light = "lightStep12";
-      };
+      primary = { dark = "darkBlueBright"; light = "lightBlue"; };
+      secondary = { dark = "darkPurpleBright"; light = "lightPurple"; };
+      accent = { dark = "darkAquaBright"; light = "lightAqua"; };
+      error = { dark = "darkRedBright"; light = "lightRed"; };
+      warning = { dark = "darkOrangeBright"; light = "lightOrange"; };
+      success = { dark = "darkGreenBright"; light = "lightGreen"; };
+      info = { dark = "darkYellowBright"; light = "lightYellow"; };
+      text = { dark = "darkFg1"; light = "lightFg1"; };
+      textMuted = { dark = "darkGray"; light = "lightGray"; };
+      background = { dark = "darkBg0"; light = "lightBg0"; };
+      backgroundPanel = { dark = "darkBg1"; light = "lightBg1"; };
+      backgroundElement = { dark = "darkBg2"; light = "lightBg2"; };
+      border = { dark = "darkBg3"; light = "lightBg3"; };
+      borderActive = { dark = "darkFg1"; light = "lightFg1"; };
+      borderSubtle = { dark = "darkBg2"; light = "lightBg2"; };
+      diffAdded = { dark = "darkGreen"; light = "lightGreen"; };
+      diffRemoved = { dark = "darkRed"; light = "lightRed"; };
+      diffContext = { dark = "darkGray"; light = "lightGray"; };
+      diffHunkHeader = { dark = "darkAqua"; light = "lightAqua"; };
+      diffHighlightAdded = { dark = "darkGreenBright"; light = "lightGreen"; };
+      diffHighlightRemoved = { dark = "darkRedBright"; light = "lightRed"; };
+      diffAddedBg = { dark = "#32302f"; light = "#e2e0b5"; };
+      diffRemovedBg = { dark = "#322929"; light = "#e9d8d5"; };
+      diffContextBg = { dark = "darkBg1"; light = "lightBg1"; };
+      diffLineNumber = { dark = "darkBg3"; light = "lightBg3"; };
+      diffAddedLineNumberBg = { dark = "#2a2827"; light = "#d4d2a9"; };
+      diffRemovedLineNumberBg = { dark = "#2a2222"; light = "#d8cbc8"; };
+      markdownText = { dark = "darkFg1"; light = "lightFg1"; };
+      markdownHeading = { dark = "darkBlueBright"; light = "lightBlue"; };
+      markdownLink = { dark = "darkAquaBright"; light = "lightAqua"; };
+      markdownLinkText = { dark = "darkGreenBright"; light = "lightGreen"; };
+      markdownCode = { dark = "darkYellowBright"; light = "lightYellow"; };
+      markdownBlockQuote = { dark = "darkGray"; light = "lightGray"; };
+      markdownEmph = { dark = "darkPurpleBright"; light = "lightPurple"; };
+      markdownStrong = { dark = "darkOrangeBright"; light = "lightOrange"; };
+      markdownHorizontalRule = { dark = "darkGray"; light = "lightGray"; };
+      markdownListItem = { dark = "darkBlueBright"; light = "lightBlue"; };
+      markdownListEnumeration = { dark = "darkAquaBright"; light = "lightAqua"; };
+      markdownImage = { dark = "darkAquaBright"; light = "lightAqua"; };
+      markdownImageText = { dark = "darkGreenBright"; light = "lightGreen"; };
+      markdownCodeBlock = { dark = "darkFg1"; light = "lightFg1"; };
+      syntaxComment = { dark = "darkGray"; light = "lightGray"; };
+      syntaxKeyword = { dark = "darkRedBright"; light = "lightRed"; };
+      syntaxFunction = { dark = "darkGreenBright"; light = "lightGreen"; };
+      syntaxVariable = { dark = "darkBlueBright"; light = "lightBlue"; };
+      syntaxString = { dark = "darkYellowBright"; light = "lightYellow"; };
+      syntaxNumber = { dark = "darkPurpleBright"; light = "lightPurple"; };
+      syntaxType = { dark = "darkAquaBright"; light = "lightAqua"; };
+      syntaxOperator = { dark = "darkOrangeBright"; light = "lightOrange"; };
+      syntaxPunctuation = { dark = "darkFg1"; light = "lightFg1"; };
     };
   };
 }
