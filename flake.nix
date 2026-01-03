@@ -50,7 +50,8 @@
             name = "steven";
             home = "/Users/steven";
           };
-          home-manager.extraSpecialArgs = { inherit (inputs) my-neovim; };
+           home-manager.extraSpecialArgs = { inherit (inputs) my-neovim; };
+           home-manager.backupFileExtension = "backup";
           home-manager.users.steven = {
             imports = [
               ./home-manager.nix
