@@ -24,7 +24,7 @@ in {
 
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
-    theme = "gruvbox";
+    theme = "orng";
     plugin = [
       "opencode-google-antigravity-auth@0.2.12"
       "opencode-supermemory@0.1.5"

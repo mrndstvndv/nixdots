@@ -17,7 +17,22 @@
 
       # set -g status-position top
 
-      set -g status-right "#($HOME/.local/bin/tmux_status.sh)"
+      # Statusbar styling - Gruvbox dark inspired
+      set -g status-style 'bg=default,fg=default'
+
+      # Left: session name in warm orange-brown
+      set -g status-left '#[fg=colour130,bold]#S #[fg=default]| '
+      set -g status-left-length 20
+
+      # Right: disabled
+      set -g status-right ""
+
+      # Window list: minimal format
+      set -g window-status-format '#[fg=colour245]#I #W '
+      set -g window-status-current-format '#[fg=colour223,bold]#I #W '
+
+      # Remove separators
+      set -g window-status-separator ""
 
       set-option -g default-shell "${pkgs.fish}/bin/fish"
       set-option -g default-command "${pkgs.fish}/bin/fish -i"
