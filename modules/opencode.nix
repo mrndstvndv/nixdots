@@ -1,5 +1,6 @@
-{ pkgs, ... }:
+{ pkgs, opencode, ... }:
 {
+  home.packages = [ opencode.packages.aarch64-darwin.opencode-full ];
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
     theme = "gruvbox-transparent";

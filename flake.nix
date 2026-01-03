@@ -10,6 +10,7 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
+    opencode.url = "github:crimera/opencode-flake";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     nix-homebrew.inputs.nixpkgs.follows = "nixpkgs";
     homebrew-core = {
@@ -50,7 +51,7 @@
             name = "steven";
             home = "/Users/steven";
           };
-           home-manager.extraSpecialArgs = { inherit (inputs) my-neovim; };
+            home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode; };
            home-manager.backupFileExtension = "backup";
           home-manager.users.steven = {
             imports = [
