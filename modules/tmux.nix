@@ -28,8 +28,8 @@
       set -g status-right ""
 
       # Window list: minimal format
-      set -g window-status-format '#[fg=colour245]#I #W '
-      set -g window-status-current-format '#[fg=colour223,bold]#I #W '
+      set -g window-status-format '#[fg=colour245]#W '
+      set -g window-status-current-format '#[fg=colour223,bold]#W '
 
       # Remove separators
       set -g window-status-separator ""
