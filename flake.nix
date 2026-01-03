@@ -10,7 +10,7 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
-    opencode.url = "github:crimera/opencode-flake";
+    opencode.url = "github:mrndstvndv/opencode-flake";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     nix-homebrew.inputs.nixpkgs.follows = "nixpkgs";
     homebrew-core = {
@@ -29,7 +29,7 @@
     };
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, nix-homebrew, homebrew-core, homebrew-cask, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, nix-homebrew, homebrew-core, homebrew-cask, nix-on-droid }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
