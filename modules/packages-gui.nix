@@ -3,6 +3,7 @@
   home.packages = [
     pkgs.mpv
     pkgs.localsend
+    pkgs.jetbrains.idea
   ];
 
   programs.ghostty = {
