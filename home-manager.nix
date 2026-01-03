@@ -8,7 +8,7 @@
     ./modules/neovim.nix
     ./modules/packages-common.nix
     ./modules/packages-gui.nix
-    ./modules/opencode.nix
+    ./modules/opencode
   ];
 
   home.stateVersion = "26.05";

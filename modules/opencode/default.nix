@@ -1,6 +1,17 @@
 { pkgs, opencode, ... }:
 {
-  home.packages = [ opencode.packages.aarch64-darwin.opencode-full ];
+  home.packages = [
+    opencode.packages.aarch64-darwin.opencode
+    pkgs.ast-grep
+    pkgs.ktlint
+    pkgs.ruff
+    pkgs.pyright
+    pkgs.nixd
+  ];
+
+  home.file.".config/opencode/skill/ast-grep/SKILL.md".source = ./skill/ast-grep/SKILL.md;
+  home.file.".config/opencode/skill/ast-grep/references/rule_reference.md".source = ./skill/ast-grep/references/rule_reference.md;
+
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
     theme = "gruvbox-transparent";
@@ -34,6 +45,7 @@
     };
     default_agent = "plan";
   };
+
   home.file.".config/opencode/themes/gruvbox-transparent.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/theme.json";
     defs = {
