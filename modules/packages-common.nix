@@ -9,7 +9,6 @@
     pkgs.cursor-cli
     pkgs.ffmpeg
     pkgs.android-tools
-    pkgs.ktlint
   ];
 
   programs.direnv = {

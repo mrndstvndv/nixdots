@@ -1,13 +1,26 @@
 { pkgs, opencode, ... }:
-{
-  home.packages = [
-    opencode.packages.aarch64-darwin.opencode
-    pkgs.ast-grep
-    pkgs.ktlint
-    pkgs.ruff
-    pkgs.pyright
-    pkgs.nixd
+let
+  system = pkgs.stdenv.hostPlatform.system;
+
+  extraPackages = with pkgs; [
+    ast-grep
+    ktlint
+    ruff
+    pyright
+    nixd
   ];
+
+  wrappedOpencode = pkgs.symlinkJoin {
+    name = "opencode-wrapped";
+    paths = [ opencode.packages.${system}.opencode ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/opencode \
+        --suffix PATH : ${pkgs.lib.makeBinPath extraPackages}
+    '';
+  };
+in {
+  home.packages = [ wrappedOpencode ];
 
   home.file.".config/opencode/skill/ast-grep/SKILL.md".source = ./skill/ast-grep/SKILL.md;
   home.file.".config/opencode/skill/ast-grep/references/rule_reference.md".source = ./skill/ast-grep/references/rule_reference.md;
