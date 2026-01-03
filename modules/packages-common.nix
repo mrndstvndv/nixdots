@@ -11,6 +11,7 @@
     pkgs.ffmpeg
     pkgs.localsend
     pkgs.android-tools
+    pkgs.ktlint
   ];
 
   programs.direnv = {
