@@ -41,6 +41,7 @@
     # OrbStack is pinned by default (no greedy/auto-updates)
     casks = [
       "orbstack"
+      "crossover"
     ];
   };
 }
