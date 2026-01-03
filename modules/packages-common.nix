@@ -7,9 +7,7 @@
     pkgs.git
     pkgs.uv
     pkgs.cursor-cli
-    pkgs.mpv
     pkgs.ffmpeg
-    pkgs.localsend
     pkgs.android-tools
     pkgs.ktlint
   ];
