@@ -9,6 +9,7 @@
     pkgs.cursor-cli
     pkgs.ffmpeg
     pkgs.android-tools
+    pkgs.ntfy-sh
   ];
 
   programs.direnv = {

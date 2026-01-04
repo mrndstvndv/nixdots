@@ -1,4 +1,10 @@
 { pkgs, ... }:
+let
+  statusRight = if pkgs.stdenv.isDarwin
+    then "#[fg=colour130]#(smctemp -c)°"
+    else "";
+  statusInterval = if pkgs.stdenv.isDarwin then 2 else 15;
+in
 {
   programs.tmux = {
     enable = true;
@@ -15,7 +21,7 @@
 
       set-window-option -g mode-keys vi
 
-      # set -g status-position top
+      set -g status-position top
 
       # Statusbar styling - Gruvbox dark inspired
       set -g status-style 'bg=default,fg=default'
@@ -24,8 +30,9 @@
       set -g status-left '#[fg=colour130,bold]#S #[fg=default]| '
       set -g status-left-length 20
 
-      # Right: disabled
-      set -g status-right ""
+      # Right: CPU temperature (macOS only)
+      set -g status-right "${statusRight}"
+      set -g status-interval ${toString statusInterval}
 
       # Window list: minimal format
       set -g window-status-format '#[fg=colour245]#W '

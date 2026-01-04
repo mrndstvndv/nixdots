@@ -90,6 +90,22 @@
         "type": "github"
       }
     },
+    "homebrew-smctemp": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1747522989,
+        "narHash": "sha256-PtDQU1PO7lFOOKjoJblJRbcfVz3e7drsBC6FV+KKImY=",
+        "owner": "narugit",
+        "repo": "homebrew-tap",
+        "rev": "6f55fead758cca66806905e19771df23c415d4b8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "narugit",
+        "repo": "homebrew-tap",
+        "type": "github"
+      }
+    },
     "my-neovim": {
       "inputs": {
         "nixpkgs": "nixpkgs"
@@ -355,6 +371,7 @@
         "home-manager": "home-manager",
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
+        "homebrew-smctemp": "homebrew-smctemp",
         "my-neovim": "my-neovim",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",

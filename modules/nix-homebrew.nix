@@ -1,4 +1,4 @@
-{ config, homebrew-core, homebrew-cask, ... }:
+{ config, homebrew-core, homebrew-cask, homebrew-smctemp, ... }:
 {
   nix-homebrew = {
     enable = true;
@@ -13,6 +13,7 @@
     taps = {
       "homebrew/homebrew-core" = homebrew-core;
       "homebrew/homebrew-cask" = homebrew-cask;
+      "narugit/homebrew-tap" = homebrew-smctemp;
     };
 
     # Disable mutable taps - only manage taps via nix config
@@ -42,6 +43,10 @@
     casks = [
       "orbstack"
       "crossover"
+    ];
+
+    brews = [
+      "smctemp"
     ];
   };
 }

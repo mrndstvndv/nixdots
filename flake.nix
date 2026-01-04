@@ -20,6 +20,10 @@
       url = "github:homebrew/homebrew-cask";
       flake = false;
     };
+    homebrew-smctemp = {
+      url = "github:narugit/homebrew-tap";
+      flake = false;
+    };
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -28,7 +32,7 @@
     };
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, nix-homebrew, homebrew-core, homebrew-cask, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
@@ -88,7 +92,7 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#proputer
     darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim homebrew-nix homebrew-core homebrew-cask; };
+      specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim homebrew-nix homebrew-core homebrew-cask homebrew-smctemp; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
