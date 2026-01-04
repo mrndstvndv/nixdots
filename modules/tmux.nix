@@ -36,6 +36,7 @@
 
       # Rounded corners for popup borders
       set -g popup-border-lines rounded
+      set -g popup-border-style 'fg=colour245'
 
       set-option -g default-shell "${pkgs.fish}/bin/fish"
       set-option -g default-command "${pkgs.fish}/bin/fish -i"
