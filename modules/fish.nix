@@ -16,9 +16,11 @@
           set fish_cursor_replace underscore
           set fish_cursor_external line
           set fish_cursor_visual block
-        end
+          end
 
-        # Use external storage on macOS if available
+          set fish_greeting ""
+
+          # Use external storage on macOS if available
         if test (uname) = Darwin; and test -d "/Volumes/realme"
           set --export UV_CACHE_DIR "/Volumes/realme/.cache/uv"
           set --export GRADLE_USER_HOME "/Volumes/realme/.gradle"
