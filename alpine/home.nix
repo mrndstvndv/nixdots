@@ -7,7 +7,7 @@
     ../modules/tmux.nix
     ../modules/neovim.nix
     ../modules/packages-common.nix
-    # ../modules/opencode  # TODO: add after musl support
+    ../modules/opencode  # TODO: add after musl support
   ];
 
   home.username = "steven";
