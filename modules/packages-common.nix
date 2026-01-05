@@ -10,6 +10,7 @@
     pkgs.ffmpeg
     pkgs.android-tools
     pkgs.ntfy-sh
+    pkgs.htop
   ];
 
   programs.direnv = {
