@@ -111,5 +111,12 @@
         ./nix-on-droid/system.nix
       ];
     };
+
+    # Standalone Home Manager for Alpine chroot (Termux)
+    homeConfigurations."alpine" = home-manager.lib.homeManagerConfiguration {
+      pkgs = import nixpkgs { system = "aarch64-linux"; };
+      extraSpecialArgs = { inherit my-neovim opencode; };
+      modules = [ ./alpine/home.nix ];
+    };
   };
 }
