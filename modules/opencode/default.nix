@@ -49,8 +49,23 @@ in {
       };
     };
     agent = {
-      plan.model = "google/gemini-claude-opus-4-5-thinking";
-      build.model = "opencode/minimax-m2.1-free";
+      plan = {
+        model = "google/gemini-claude-opus-4-5-thinking";
+      };
+      build = {
+        model = "opencode/minimax-m2.1-free";
+      };
+      coder = {
+        description = "Primary coding agent using GLM-4.7";
+        mode = "primary";
+        model = "opencode/glm-4.7-free";
+        temperature = 0.2;
+        tools = {
+          write = true;
+          edit = true;
+          bash = true;
+        };
+      };
     };
     default_agent = "plan";
   };
