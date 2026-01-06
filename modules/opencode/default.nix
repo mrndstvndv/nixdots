@@ -52,7 +52,8 @@ in {
         model = "google/gemini-claude-opus-4-5-thinking";
       };
       build = {
-        model = "opencode/minimax-m2.1-free";
+        model = "opencode/glm-4.7-free";
+        temperature = 0.2;
       };
       coder = {
         description = "Primary coding agent using GLM-4.7";
