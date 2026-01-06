@@ -26,7 +26,6 @@ in {
     "$schema" = "https://opencode.ai/config.json";
     plugin = [
       "opencode-google-antigravity-auth@0.2.12"
-      "opencode-supermemory@0.1.5"
     ];
     provider = {
       google.models = {
