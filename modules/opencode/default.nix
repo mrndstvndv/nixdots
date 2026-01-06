@@ -25,25 +25,41 @@ in {
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
     plugin = [
-      "opencode-google-antigravity-auth@0.2.12"
+      "opencode-antigravity-auth@1.2.7"
     ];
     provider = {
-      google.models = {
-        "gemini-3-pro-preview".options.thinkingConfig = {
-          thinkingLevel = "high";
-          includeThoughts = true;
-        };
-        "gemini-3-flash".options.thinkingConfig = {
-          thinkingLevel = "medium";
-          includeThoughts = true;
-        };
-        "gemini-2.5-flash".options.thinkingConfig = {
-          thinkingBudget = 8192;
-          includeThoughts = true;
-        };
-        "gemini-claude-opus-4-5-thinking".options.thinkingConfig = {
-          thinkingBudget = 32000;
-          includeThoughts = true;
+      google = {
+        models = {
+          "antigravity-claude-opus-4-5-thinking-low" = {
+            name = "Claude Opus 4.5 Think Low (Antigravity)";
+            limit = { context = 200000; output = 64000; };
+            modalities = { input = ["text" "image" "pdf"]; output = ["text"]; };
+          };
+          "antigravity-claude-opus-4-5-thinking-medium" = {
+            name = "Claude Opus 4.5 Think Medium (Antigravity)";
+            limit = { context = 200000; output = 64000; };
+            modalities = { input = ["text" "image" "pdf"]; output = ["text"]; };
+          };
+          "antigravity-claude-opus-4-5-thinking-high" = {
+            name = "Claude Opus 4.5 Think High (Antigravity)";
+            limit = { context = 200000; output = 64000; };
+            modalities = { input = ["text" "image" "pdf"]; output = ["text"]; };
+          };
+          "antigravity-gemini-3-pro-low" = {
+            name = "Gemini 3 Pro Low (Antigravity)";
+            limit = { context = 1048576; output = 65535; };
+            modalities = { input = ["text" "image" "pdf"]; output = ["text"]; };
+          };
+          "antigravity-gemini-3-pro-high" = {
+            name = "Gemini 3 Pro High (Antigravity)";
+            limit = { context = 1048576; output = 65535; };
+            modalities = { input = ["text" "image" "pdf"]; output = ["text"]; };
+          };
+          "antigravity-gemini-3-flash" = {
+            name = "Gemini 3 Flash (Antigravity)";
+            limit = { context = 1048576; output = 65536; };
+            modalities = { input = ["text" "image" "pdf"]; output = ["text"]; };
+          };
         };
       };
     };
