@@ -57,7 +57,7 @@ in {
       };
       coder = {
         description = "Primary coding agent using GLM-4.7";
-        mode = "primary";
+        mode = "subagent";
         model = "opencode/glm-4.7-free";
         temperature = 0.2;
         tools = {
