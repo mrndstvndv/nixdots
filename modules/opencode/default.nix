@@ -64,13 +64,6 @@ in {
       };
     };
     agent = {
-      plan = {
-        model = "google/gemini-claude-opus-4-5-thinking";
-      };
-      build = {
-        model = "opencode/glm-4.7-free";
-        temperature = 0.2;
-      };
       coder = {
         description = "Primary coding agent using GLM-4.7";
         mode = "subagent";
