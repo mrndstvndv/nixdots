@@ -11,6 +11,8 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
     opencode.url = "github:mrndstvndv/opencode-flake";
+    amp.url = "github:mrndstvndv/amp-flake";
+    amp.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     homebrew-core = {
       url = "github:homebrew/homebrew-core";
@@ -32,7 +34,7 @@
     };
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, amp, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
@@ -54,7 +56,7 @@
             name = "steven";
             home = "/Users/steven";
           };
-            home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode; };
+            home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode amp; };
            home-manager.backupFileExtension = "backup";
           home-manager.users.steven = {
             imports = [
@@ -107,16 +109,24 @@
       modules = [
         # Inject flake input my-neovim into _module.args, so all
         # nix-on-droid modules (including HM) can see it.
-        { _module.args.my-neovim = my-neovim; }
+        { _module.args.my-neovim = my-neovim; _module.args.amp = amp; }
         ./nix-on-droid/system.nix
       ];
     };
 
     # Standalone Home Manager for Alpine chroot (Termux)
     homeConfigurations."alpine" = home-manager.lib.homeManagerConfiguration {
-      pkgs = import nixpkgs { system = "aarch64-linux"; };
-      extraSpecialArgs = { inherit my-neovim opencode; };
-      modules = [ ./alpine/home.nix ];
+      pkgs = nixpkgs.legacyPackages.aarch64-linux;
+      extraSpecialArgs = { inherit my-neovim opencode amp; };
+      modules = [
+        ./alpine/home.nix
+        {
+          nixpkgs.config = {
+            allowUnfree = true;
+            allowUnfreePredicate = (_: true);
+          };
+        }
+      ];
     };
   };
 }

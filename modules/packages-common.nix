@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, amp, ... }:
 {
   home.packages = [
     pkgs.bun
@@ -11,6 +11,7 @@
     pkgs.android-tools
     pkgs.ntfy-sh
     pkgs.htop
+    (amp.lib.mkAmp pkgs.system pkgs)
   ];
 
   programs.direnv = {

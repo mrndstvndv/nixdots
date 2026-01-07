@@ -1,6 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 {
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config = {
+    allowUnfree = true;
+    allowUnfreePredicate = (_: true);
+  };
 
   imports = [
     ../modules/fish.nix

@@ -1,5 +1,6 @@
 { pkgs, ... }:
 {
+  nixpkgs.config.allowUnfree = true;
   imports = [
     ../modules/fish.nix
     ../modules/tmux.nix
