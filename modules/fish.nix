@@ -18,6 +18,10 @@
           set fish_cursor_visual block
           end
 
+          function prompt_login
+            # Return empty to remove username@hostname from prompt
+          end
+
           set fish_greeting ""
 
           # Use external storage on macOS if available
