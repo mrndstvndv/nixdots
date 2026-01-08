@@ -25,7 +25,7 @@ in {
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
     plugin = [
-      "opencode-antigravity-auth@1.2.7"
+      "opencode-antigravity-auth@1.2.8"
     ];
     provider = {
       google = {
