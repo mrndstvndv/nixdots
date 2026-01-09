@@ -11,6 +11,7 @@
     pkgs.android-tools
     pkgs.ntfy-sh
     pkgs.htop
+    pkgs.tailscale
     (amp.lib.mkAmp pkgs.system pkgs)
   ];
 
