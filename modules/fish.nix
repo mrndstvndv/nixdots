@@ -18,6 +18,11 @@
           set fish_cursor_visual block
           end
 
+          # Auto-start tmux in SSH sessions
+          if set -q SSH_CONNECTION; and status is-interactive; and not set -q TMUX
+            tmux new -As 0
+          end
+
           function prompt_login
             # Return empty to remove username@hostname from prompt
           end
