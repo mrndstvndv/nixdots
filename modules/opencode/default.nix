@@ -78,4 +78,11 @@ in {
     default_agent = "plan";
   };
 
+  home.file.".config/opencode/AGENTS.md".text = ''
+    Do not write code before stating assumptions.
+    Do not claim correctness you haven't verified.
+    Do not handle only the happy path.
+    Under what conditions does this work?
+  '';
+
 }
