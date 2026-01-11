@@ -1,7 +1,7 @@
 { pkgs, ... }:
 let
   statusRight = if pkgs.stdenv.isDarwin
-    then "#[fg=colour130]#(smctemp -c)°"
+    then "#[fg=colour130]#(/opt/homebrew/bin/smctemp -c)°"
     else "";
   statusInterval = if pkgs.stdenv.isDarwin then 2 else 15;
 in
