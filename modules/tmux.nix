@@ -53,7 +53,7 @@ in
 
       # open new windows in current path
       bind-key c new-window -c "#{pane_current_path}"
-      bind -n C-t new-window -c "#{pane_current_path}"
+      # bind -n C-t new-window -c "#{pane_current_path}"
       bind -n C-w kill-window
 
       # split panes in current path
