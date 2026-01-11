@@ -373,11 +373,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1767916760,
-        "narHash": "sha256-rgt6l6Zte8wiIx3VEY3Llz+COEvq7dB3W2zFRYKBb40=",
+        "lastModified": 1768093354,
+        "narHash": "sha256-fjP/h3KCUMiPJjwcZHtce2MxWGXST/cxpZ351LpdU90=",
         "owner": "mrndstvndv",
         "repo": "opencode-flake",
-        "rev": "300b95cbde24a97f02fee6b8934a7fef10f6c6d5",
+        "rev": "866a44a9009a274d6174eb55f67d5acc992793af",
         "type": "github"
       },
       "original": {
