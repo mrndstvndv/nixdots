@@ -6,5 +6,6 @@
     pkgs.mpv
     pkgs.localsend
     pkgs.jetbrains.idea
+    pkgs.qbittorrent
   ];
 }
