@@ -85,4 +85,6 @@ in {
     Under what conditions does this work?
   '';
 
+  home.file.".config/opencode/skill/llms-txt/SKILL.md".source = ./skills/llms-txt/SKILL.md;
+
 }
