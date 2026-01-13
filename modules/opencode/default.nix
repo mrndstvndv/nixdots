@@ -87,4 +87,6 @@ in {
 
   home.file.".config/opencode/skill/llms-txt/SKILL.md".source = ./skills/llms-txt/SKILL.md;
 
+  home.file.".config/opencode/plugin/notify.ts".source = ./plugins/notify.ts;
+
 }
