@@ -44,6 +44,8 @@
       "orbstack"
       "crossover"
       "antigravity"
+      "proton-pass"
+      "protonvpn"
     ];
 
     brews = [
