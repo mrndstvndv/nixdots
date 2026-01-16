@@ -9,6 +9,8 @@
           fish_add_path --prepend $HOME/.nix-profile/bin
           fish_vi_key_bindings
           bind -M insert \cr history-pager
+          bind \cz 'fg 2>/dev/null; commandline -f repaint'
+          bind -M insert \cz 'fg 2>/dev/null; commandline -f repaint'
           # Emulate Vim cursor shapes
           set fish_cursor_default block
           set fish_cursor_insert line
