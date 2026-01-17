@@ -74,6 +74,9 @@ in {
           bash = true;
         };
       };
+      title = {
+        model = "github-copilot/gpt-4o";
+      };
     };
     default_agent = "plan";
   };
