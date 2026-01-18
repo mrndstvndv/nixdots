@@ -25,7 +25,7 @@ in {
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
     plugin = [
-      "opencode-antigravity-auth@1.2.8"
+      "opencode-antigravity-auth@1.3.0"
     ];
     provider = {
       google = {
@@ -86,6 +86,8 @@ in {
     Do not claim correctness you haven't verified.
     Do not handle only the happy path.
     Under what conditions does this work?
+
+    Whenever you try to use python to run a python script/program use uv
   '';
 
   home.file.".config/opencode/skill/llms-txt/SKILL.md".source = ./skills/llms-txt/SKILL.md;
