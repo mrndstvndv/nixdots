@@ -12,6 +12,7 @@
     pkgs.ntfy-sh
     pkgs.htop
     pkgs.tailscale
+    pkgs.github-copilot-cli
     (amp.lib.mkAmp pkgs.system pkgs)
   ];
 
