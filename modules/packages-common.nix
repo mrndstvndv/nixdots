@@ -13,6 +13,7 @@
     pkgs.htop
     pkgs.tailscale
     pkgs.github-copilot-cli
+    pkgs.jujutsu
     (amp.lib.mkAmp pkgs.system pkgs)
   ];
 
