@@ -96,8 +96,9 @@ in {
     Whenever you try to use python to run a python script/program use uv
   '';
 
-  home.file.".config/opencode/skill/llms-txt/SKILL.md".source = ./skills/llms-txt/SKILL.md;
-
-  home.file.".config/opencode/plugin/notify.ts".source = ./plugins/notify.ts;
+  home.file.".config/opencode/skill".source = ./skills;
+  home.file.".config/opencode/plugin".source = ./plugins;
+  home.file.".config/opencode/agent".source = ./agents;
+  home.file.".config/opencode/command".source = ./commands;
 
 }
