@@ -83,6 +83,9 @@ in {
       title = {
         model = "github-copilot/gpt-4o";
       };
+      explore = {
+        model = "google/antigravity-gemini-3-flash";
+      };
     };
     default_agent = "plan";
   };
