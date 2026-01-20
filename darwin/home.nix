@@ -8,5 +8,6 @@
   home.packages = [
     pkgs.daisydisk
     pkgs.raycast
+    pkgs.tailscale
   ];
 }

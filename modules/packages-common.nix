@@ -11,8 +11,8 @@
     pkgs.android-tools
     pkgs.ntfy-sh
     pkgs.htop
-    pkgs.tailscale
     pkgs.jujutsu
+    pkgs.nodejs_24
     (amp.lib.mkAmp pkgs.system pkgs)
   ];
 
