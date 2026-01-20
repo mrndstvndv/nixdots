@@ -24,6 +24,12 @@ in {
 
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
+    mcp = {
+      context7 = {
+        type = "remote";
+        url = "https://mcp.context7.com/mcp";
+      };
+    };
     plugin = [
       "opencode-antigravity-auth@1.3.0"
     ];
