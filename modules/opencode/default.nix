@@ -31,7 +31,7 @@ in {
       };
     };
     plugin = [
-      "opencode-antigravity-auth@1.3.0"
+      "opencode-antigravity-auth@1.3.1"
     ];
     provider = {
       google = {
