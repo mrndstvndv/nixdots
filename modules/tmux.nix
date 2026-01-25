@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, statusPosition ? "top", ... }:
 let
   statusRight = if pkgs.stdenv.isDarwin
     then "#[fg=colour130]#(/opt/homebrew/bin/smctemp -c)°"
@@ -21,7 +21,7 @@ in
 
       set-window-option -g mode-keys vi
 
-      set -g status-position top
+      set -g status-position ${statusPosition}
 
       # Statusbar styling - Gruvbox dark inspired
       set -g status-style 'bg=default,fg=default'

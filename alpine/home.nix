@@ -7,7 +7,7 @@
 
   imports = [
     ../modules/fish.nix
-    ../modules/tmux.nix
+    (import ../modules/tmux.nix { inherit pkgs lib; statusPosition = "bottom"; })
     ../modules/neovim.nix
     ../modules/packages-common.nix
     ../modules/opencode  # TODO: add after musl support
