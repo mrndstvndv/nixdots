@@ -13,6 +13,14 @@
     ../modules/opencode  # TODO: add after musl support
   ];
 
+  home.packages = [
+    pkgs.tzdata
+  ];
+
+  home.sessionVariables = {
+    TZ = "Asia/Manila";
+  };
+
   home.username = "steven";
   home.homeDirectory = "/home/steven";
   home.stateVersion = "24.05";
