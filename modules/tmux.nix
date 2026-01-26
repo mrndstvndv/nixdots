@@ -52,7 +52,9 @@ in
       bind-key l display-popup -E -d "#{pane_current_path}" -w 90% -h 90% "lazygit"
 
       # open new windows in current path
-      bind-key c new-window -c "#{pane_current_path}"
+      # Use -a to insert the new window after the current window (avoids
+      # re-used numeric ids causing windows to appear in the middle).
+      bind-key c new-window -a -c "#{pane_current_path}"
       # bind -n C-t new-window -c "#{pane_current_path}"
       bind -n C-w kill-window
 
