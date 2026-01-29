@@ -25,6 +25,14 @@ in {
 
   home.file.".config/opencode/opencode.json".text = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
+    permission = {
+      external_directory = {
+        "/nix/store/*-zig-*/lib/std/**" = "allow";
+      };
+      edit = {
+        "/nix/store/*-zig-*/lib/std/**" = "deny";
+      };
+    };
     mcp = {
       context7 = {
         type = "remote";
@@ -32,7 +40,7 @@ in {
       };
     };
     plugin = [
-      "opencode-antigravity-auth@1.3.1"
+      "opencode-antigravity-auth@1.4.1"
     ];
     provider = {
       google = {
@@ -85,7 +93,7 @@ in {
         model = "github-copilot/gpt-4o";
       };
       explore = {
-        model = "google/antigravity-gemini-3-flash";
+        model = "kimi-for-coding/k2p5";
       };
     };
     default_agent = "plan";
