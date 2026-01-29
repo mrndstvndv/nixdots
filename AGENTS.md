@@ -1,3 +1,6 @@
+## Github interactions
+When you find yourself needing to browse code hosted in github you can use github cli via `gh`
+
 ## Commit Guidelines
 
 This project uses a simple `scope: description` format (NOT semantic commits).
