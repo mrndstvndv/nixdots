@@ -7,11 +7,13 @@
 
   imports = [
     ../modules/fish.nix
-    (import ../modules/tmux.nix { inherit pkgs lib; statusPosition = "bottom"; })
+    ../modules/tmux.nix
     ../modules/neovim.nix
     ../modules/packages-common.nix
     ../modules/opencode  # TODO: add after musl support
   ];
+
+  custom.tmux.statusPosition = "bottom";
 
   home.packages = [
     pkgs.tzdata

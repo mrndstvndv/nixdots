@@ -1,12 +1,19 @@
-{ pkgs, statusPosition ? "top", ... }:
+{ pkgs, lib, config, ... }:
 let
+  cfg = config.custom.tmux;
   statusRight = if pkgs.stdenv.isDarwin
     then "#[fg=colour130]#(/opt/homebrew/bin/smctemp -c)°"
     else "";
   statusInterval = if pkgs.stdenv.isDarwin then 2 else 15;
 in
 {
-  programs.tmux = {
+  options.custom.tmux.statusPosition = lib.mkOption {
+    type = lib.types.str;
+    default = "top";
+    description = "Position of the tmux status bar (top or bottom)";
+  };
+
+  config.programs.tmux = {
     enable = true;
     extraConfig = ''
       set -sg escape-time 5
@@ -21,7 +28,7 @@ in
 
       set-window-option -g mode-keys vi
 
-      set -g status-position ${statusPosition}
+      set -g status-position ${cfg.statusPosition}
 
       # Statusbar styling - Gruvbox dark inspired
       set -g status-style 'bg=default,fg=default'
