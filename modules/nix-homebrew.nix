@@ -46,6 +46,7 @@
       "antigravity"
       "proton-pass"
       "protonvpn"
+      "google-chrome@canary"
     ];
 
     brews = [
