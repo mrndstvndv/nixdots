@@ -39,7 +39,7 @@ in {
       };
     };
     plugin = [
-      "opencode-antigravity-auth@latest"
+      "opencode-antigravity-auth@1.4.3"
     ];
     provider = {
       google = {
@@ -108,7 +108,7 @@ in {
   '';
 
   home.file.".config/opencode/skill".source = ./skills;
-  home.file.".config/opencode/plugins".source = ./plugins;
+  # home.file.".config/opencode/plugins".source = ./plugins;
   home.file.".config/opencode/agent".source = ./agents;
   home.file.".config/opencode/command".source = ./commands;
 
