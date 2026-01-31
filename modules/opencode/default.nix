@@ -16,8 +16,7 @@ let
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/opencode \
-        --suffix PATH : ${pkgs.lib.makeBinPath extraPackages} \
-        --set OPENCODE_EXPERIMENTAL true
+        --suffix PATH : ${pkgs.lib.makeBinPath extraPackages}
     '';
   };
 in {
