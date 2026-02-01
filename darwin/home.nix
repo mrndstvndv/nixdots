@@ -6,7 +6,7 @@
   ];
 
   home.packages = [
-    pkgs.daisydisk
+    # pkgs.daisydisk
     pkgs.raycast
     pkgs.tailscale
   ];
