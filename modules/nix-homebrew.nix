@@ -47,6 +47,7 @@
       "proton-pass"
       "protonvpn"
       "google-chrome@canary"
+      "mpv"
     ];
 
     brews = [
