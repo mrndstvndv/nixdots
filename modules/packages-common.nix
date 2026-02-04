@@ -13,6 +13,7 @@
     pkgs.htop
     pkgs.jujutsu
     pkgs.nodejs_24
+    pkgs.jq
     (amp.lib.mkAmp pkgs.system pkgs)
   ];
 
