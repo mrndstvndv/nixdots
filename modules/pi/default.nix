@@ -17,5 +17,8 @@
 
     # Copy fresh content from store (dereferencing symlinks with -L)
     cp -Lr ${./package}/* "$pkgDir"/
+
+    # Ensure we have write permissions on everything so we can update/delete next time
+    chmod -R u+w "$pkgDir"
   '';
 }
