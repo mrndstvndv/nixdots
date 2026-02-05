@@ -10,7 +10,8 @@
   "pi": {
     "extensions": [
       "./extensions/lsp/lsp.ts",
-      "./extensions/lsp/lsp-tool.ts"
+      "./extensions/lsp/lsp-tool.ts",
+      "./extensions/kimi/kimi.ts"
     ]
   }
 }
