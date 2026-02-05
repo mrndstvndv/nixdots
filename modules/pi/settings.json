@@ -1,9 +1,11 @@
 {
-  "lastChangelogVersion": "0.51.6",
+  "lastChangelogVersion": "0.52.5",
   "packages": [
     "~/.pi/packages/nixdots-extensions"
   ],
   "lsp": {
     "hookMode": "edit_write"
-  }
+  },
+  "defaultProvider": "kimi",
+  "defaultModel": "kimi-k2.5"
 }

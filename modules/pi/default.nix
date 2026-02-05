@@ -1,7 +1,7 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, config, ... }:
 {
   home.file.".pi/agent/AGENTS.md".source = ./AGENTS.md;
-  home.file.".pi/agent/settings.json".source = ./settings.json;
+  home.file.".pi/agent/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nixdots/modules/pi/settings.json";
 
   # Copy package to ~/.pi/packages/nixdots-extensions to allow node_modules to work
   # (Symlinks resolve to Nix store where node_modules doesn't exist)
