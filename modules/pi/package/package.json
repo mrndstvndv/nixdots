@@ -9,7 +9,6 @@
   },
   "pi": {
     "extensions": [
-      "./extensions/single-ctrl-c-exit.ts",
       "./extensions/lsp/lsp.ts",
       "./extensions/lsp/lsp-tool.ts"
     ]
