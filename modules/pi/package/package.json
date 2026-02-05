@@ -1,0 +1,9 @@
+{
+  "name": "nixdots-pi-extensions",
+  "version": "1.0.0",
+  "description": "Pi extensions for nixdots config",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extensions"]
+  }
+}
