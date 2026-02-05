@@ -9,8 +9,13 @@
     pkgDir="$HOME/.pi/packages/nixdots-extensions"
     mkdir -p "$pkgDir"
     
-    # Sync files from store. --delete removes stale files from target.
-    # --exclude protects node_modules and package-lock.json from being deleted.
-    ${pkgs.rsync}/bin/rsync -a --chmod=u+w --delete --exclude=node_modules --exclude=package-lock.json ${./package}/ $pkgDir/
+    # Remove managed files/dirs to ensure clean slate (avoids stale files)
+    # node_modules and package-lock.json are NOT removed
+    rm -rf "$pkgDir/extensions"
+    rm -f "$pkgDir/package.json"
+    rm -f "$pkgDir/README.md"
+
+    # Copy fresh content from store (dereferencing symlinks with -L)
+    cp -Lr ${./package}/* "$pkgDir"/
   '';
 }
