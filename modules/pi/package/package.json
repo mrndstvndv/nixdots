@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Pi extensions for nixdots config",
   "keywords": ["pi-package"],
+  "type": "module",
+  "dependencies": {
+    "vscode-languageserver-protocol": "^3.17.5"
+  },
   "pi": {
     "extensions": ["./extensions"]
   }
