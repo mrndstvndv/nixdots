@@ -4,5 +4,8 @@
   "defaultModel": "claude-sonnet-4-5",
   "packages": [
     "~/.pi/packages/nixdots-extensions"
-  ]
+  ],
+  "lsp": {
+    "hookMode": "edit_write"
+  }
 }
