@@ -1,7 +1,5 @@
 {
   "lastChangelogVersion": "0.51.6",
-  "defaultProvider": "google-antigravity",
-  "defaultModel": "claude-sonnet-4-5",
   "packages": [
     "~/.pi/packages/nixdots-extensions"
   ],
