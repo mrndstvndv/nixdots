@@ -11,6 +11,7 @@
     ../modules/neovim.nix
     ../modules/packages-common.nix
     ../modules/opencode  # TODO: add after musl support
+    ../modules/pi
   ];
 
   custom.tmux.statusPosition = "bottom";
