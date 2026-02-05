@@ -8,6 +8,10 @@
     "vscode-languageserver-protocol": "^3.17.5"
   },
   "pi": {
-    "extensions": ["./extensions"]
+    "extensions": [
+      "./extensions/single-ctrl-c-exit.ts",
+      "./extensions/lsp/lsp.ts",
+      "./extensions/lsp/lsp-tool.ts"
+    ]
   }
 }
