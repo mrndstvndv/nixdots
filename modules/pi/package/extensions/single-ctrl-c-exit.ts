@@ -6,6 +6,27 @@
  * Ctrl+C clears the text as normal.
  */
 
+import { type ExtensionAPI } from "@mariozechner/pi-coding-agent";
+
+export default function (pi: ExtensionAPI) {
+  pi.registerShortcut("ctrl+c", {
+    description: "Exit if empty, else clear line",
+    handler: async (ctx) => {
+      const text = ctx.ui.getEditorText();
+      if (!text.trim()) {
+        // Buffer is empty -> Exit
+        // We use shutdown() which is equivalent to the exit signal
+        ctx.shutdown();
+      } else {
+        // Buffer has text -> Clear it
+        ctx.ui.setEditorText("");
+      }
+    },
+  });
+}
+
+/*
+// Previous implementation using CustomEditor (broke autocomplete)
 import { CustomEditor, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { matchesKey } from "@mariozechner/pi-tui";
 
@@ -26,3 +47,4 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.setEditorComponent((tui, theme, kb) => new SingleCtrlCEditor(tui, theme, kb));
   });
 }
+*/
