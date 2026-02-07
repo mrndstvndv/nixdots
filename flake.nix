@@ -60,7 +60,7 @@
            home-manager.backupFileExtension = "backup";
           home-manager.users.steven = {
             imports = [
-              ./home-manager.nix
+              ./darwin/common.nix
               ./darwin/home.nix
             ];
           };
