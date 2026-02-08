@@ -131,11 +131,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1770419838,
-        "narHash": "sha256-VwOCTvteJ5W0txcj5PCsyjFPruwrhz5TqZYhXpQhwzk=",
+        "lastModified": 1770550889,
+        "narHash": "sha256-IFAeAocXqEbiWVacWLb1jb5L2zaaBDEjRxA7/JNGi/M=",
         "owner": "crimera",
         "repo": "nvim.config",
-        "rev": "240e38c17cc0dab6b41af93f26b3bc2deb2c9072",
+        "rev": "e815465e9eec2ed618493753d86d7d937ddee13a",
         "type": "github"
       },
       "original": {
