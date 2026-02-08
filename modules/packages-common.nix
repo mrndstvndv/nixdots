@@ -14,6 +14,7 @@
     pkgs.jujutsu
     pkgs.nodejs_24
     pkgs.jq
+    pkgs.aria2
     (amp.lib.mkAmp pkgs.system pkgs)
   ];
 
