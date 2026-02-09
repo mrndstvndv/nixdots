@@ -41,3 +41,8 @@ function process(user: User | null) {
 ## GitHub CLI
 - Search: `gh search code --repo owner/repo "query"`
 - Read: `gh api -H "Accept: application/vnd.github.v3.raw" /repos/owner/repo/contents/path/to/file`
+
+## Tool Preferences
+- Use `uv` instead of `python` (e.g., `uv run script.py`)
+- Use `bun` instead of `node` or `npm`
+- Use `bunx` instead of `npx`
