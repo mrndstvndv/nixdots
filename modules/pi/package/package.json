@@ -11,7 +11,8 @@
     "extensions": [
       "./extensions/lsp/lsp.ts",
       "./extensions/lsp/lsp-tool.ts",
-      "./extensions/kimi/kimi.ts"
+      "./extensions/kimi/kimi.ts",
+      "./extensions/tmux-notify.ts"
     ]
   }
 }
