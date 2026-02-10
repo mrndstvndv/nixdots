@@ -69,7 +69,7 @@ in
       bind-key '"' split-window -v -c "#{pane_current_path}"
       bind-key % split-window -h -c "#{pane_current_path}"
 
-      set -g mouse on
+      set -g mouse off
 
       unbind-key -n C-r
 
