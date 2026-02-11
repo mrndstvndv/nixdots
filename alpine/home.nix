@@ -24,8 +24,8 @@
     TZ = "Asia/Manila";
   };
 
-  home.username = "steven";
-  home.homeDirectory = "/home/steven";
+  home.username = "stv";
+  home.homeDirectory = "/home/stv";
   home.stateVersion = "24.05";
 
   # Required for standalone home-manager
