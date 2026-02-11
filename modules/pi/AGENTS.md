@@ -14,6 +14,7 @@ Sacrifice grammar for accuracy + conciseness. Context bloat matters. Be direct.
 - Self-documenting code. Comments explain "why" only.
 - Test edge cases.
 - Dont implement stuff or write code without the user explicitly saying you are allowed to. The default state is planning, after we make a plan ask the user if it's safe to procceed to writing code
+- Don't clone github repos but use gh cli to explore their codebase.
 
 ## Example
 ```typescript
