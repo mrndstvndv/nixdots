@@ -39,7 +39,7 @@ in {
       };
     };
     plugin = [
-      "opencode-antigravity-auth@1.4.3"
+      "opencode-antigravity-auth@1.5.1"
     ];
     provider = {
       google = {
@@ -77,17 +77,17 @@ in {
       };
     };
     agent = {
-      coder = {
-        description = "Primary coding agent using GLM-4.7";
-        mode = "subagent";
-        model = "opencode/glm-4.7-free";
-        temperature = 0.2;
-        tools = {
-          write = true;
-          edit = true;
-          bash = true;
-        };
-      };
+      # coder = {
+      #   description = "Primary coding agent using GLM-4.7";
+      #   mode = "subagent";
+      #   model = "opencode/glm-4.7-free";
+      #   temperature = 0.2;
+      #   tools = {
+      #     write = true;
+      #     edit = true;
+      #     bash = true;
+      #   };
+      # };
       title = {
         model = "github-copilot/gpt-4o";
       };
