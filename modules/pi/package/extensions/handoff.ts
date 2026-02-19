@@ -12,7 +12,7 @@
  * The generated prompt appears as a draft in the editor for review/editing.
  */
 
-import { complete, type Message } from "@mariozechner/pi-ai";
+import { spawn } from "child_process";
 import type { ExtensionAPI, SessionEntry } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
 
@@ -47,11 +47,6 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			if (!ctx.model) {
-				ctx.ui.notify("No model selected", "error");
-				return;
-			}
-
 			const goal = args.trim();
 			if (!goal) {
 				ctx.ui.notify("Usage: /handoff <goal for new thread>", "error");
@@ -80,33 +75,58 @@ export default function (pi: ExtensionAPI) {
 				loader.onAbort = () => done(null);
 
 				const doGenerate = async () => {
-					const apiKey = await ctx.modelRegistry.getApiKey(ctx.model!);
+					const combinedPrompt = `${SYSTEM_PROMPT}\n\n## Conversation History\n\n${conversationText}\n\n## User's Goal for New Thread\n\n${goal}`;
 
-					const userMessage: Message = {
-						role: "user",
-						content: [
-							{
-								type: "text",
-								text: `## Conversation History\n\n${conversationText}\n\n## User's Goal for New Thread\n\n${goal}`,
-							},
-						],
-						timestamp: Date.now(),
-					};
+					// Spawn gemini CLI with fixed model - use stdin for long prompt
+					return new Promise<string>((resolve, reject) => {
+						const child = spawn("gemini", ["-m", "gemini-3-flash-preview"], {
+							stdio: ["pipe", "pipe", "pipe"],
+						});
 
-					const response = await complete(
-						ctx.model!,
-						{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
-						{ apiKey, signal: loader.signal },
-					);
+						let stdout = "";
+						let stderr = "";
 
-					if (response.stopReason === "aborted") {
-						return null;
-					}
+						// Kill child if loader is aborted
+						if (loader.signal) {
+							loader.signal.addEventListener("abort", () => child.kill());
+						}
 
-					return response.content
-						.filter((c): c is { type: "text"; text: string } => c.type === "text")
-						.map((c) => c.text)
-						.join("\n");
+						child.stdout.on("data", (chunk: Buffer) => {
+							stdout += chunk.toString();
+						});
+
+						child.stderr.on("data", (chunk: Buffer) => {
+							stderr += chunk.toString();
+						});
+
+						child.on("error", (err: NodeJS.ErrnoException) => {
+							if (err.code === "ENOENT") {
+								reject(new Error("gemini CLI not found. Install from https://github.com/google-gemini/gemini-cli"));
+								return;
+							}
+							reject(err);
+						});
+
+						child.on("close", (code) => {
+							// Check for auth errors in stderr
+							if (stderr && /auth|authenticate|not authenticated|unauthoriz|login/i.test(stderr)) {
+								reject(new Error("Not authenticated. Run 'gemini auth login' first."));
+								return;
+							}
+
+							if (code && code !== 0) {
+								reject(new Error(stderr || `gemini exited with code ${code}`));
+								return;
+							}
+
+							resolve(stdout.trim());
+						});
+
+						// Write prompt to stdin instead of using -p flag
+						// This avoids ARG_MAX limits for long conversations
+						child.stdin.write(combinedPrompt);
+						child.stdin.end();
+					});
 				};
 
 				doGenerate()
