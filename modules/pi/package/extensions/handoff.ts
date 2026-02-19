@@ -71,12 +71,13 @@ export default function (pi: ExtensionAPI) {
 
 			// Generate the handoff prompt with loader UI
 			const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
-				const loader = new BorderedLoader(tui, theme, "Starting Gemini CLI...");
+				const loader = new BorderedLoader(tui, theme, "Initializing Gemini CLI...");
 				loader.onAbort = () => done(null);
 
 				// Access the internal loader to update message dynamically
 				const updateMessage = (msg: string) => {
 					(loader as unknown as { loader: { setMessage: (m: string) => void } }).loader.setMessage(msg);
+					tui.requestRender();
 				};
 
 				const doGenerate = async () => {
@@ -90,9 +91,7 @@ export default function (pi: ExtensionAPI) {
 
 						let stdout = "";
 						let stderr = "";
-
-						// Update status: CLI started, now sending context
-						updateMessage("Sending context...");
+						let firstChunk = true;
 
 						// Kill child if loader is aborted
 						if (loader.signal) {
@@ -101,6 +100,10 @@ export default function (pi: ExtensionAPI) {
 
 						child.stdout.on("data", (chunk: Buffer) => {
 							stdout += chunk.toString();
+							if (firstChunk) {
+								firstChunk = false;
+								updateMessage("Generating handoff prompt...");
+							}
 						});
 
 						child.stderr.on("data", (chunk: Buffer) => {
@@ -134,9 +137,6 @@ export default function (pi: ExtensionAPI) {
 						// This avoids ARG_MAX limits for long conversations
 						child.stdin.write(combinedPrompt);
 						child.stdin.end();
-
-						// Update status: Context sent, now generating
-						updateMessage("Generating handoff prompt...");
 					});
 				};
 
