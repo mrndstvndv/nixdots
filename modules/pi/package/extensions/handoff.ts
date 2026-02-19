@@ -14,7 +14,7 @@
 
 import type { ExtensionAPI, SessionEntry } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
-import { createAcpPool, type AcpPool } from "./gemini-acp-client.js";
+import { createAcpPool, type AcpPool } from "./acp-client.js";
 
 const SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
 
@@ -41,13 +41,23 @@ Files involved:
 /** Global ACP pool - shared across all handoff calls for this pi instance */
 let acpPool: AcpPool | null = null;
 
+/** Map of auth method aliases to ACP protocol auth method IDs for Gemini */
+function getGeminiAuthMethod(hasApiKey: boolean): string {
+	return hasApiKey ? "gemini-api-key" : "oauth-personal";
+}
+
 /** Get or create the global ACP pool */
 function getAcpPool(cwd: string): AcpPool {
 	if (!acpPool) {
 		const hasApiKey = !!process.env.GEMINI_API_KEY;
 		acpPool = createAcpPool({
 			cwd,
-			authMethod: hasApiKey ? "use-gemini" : "login-with-google",
+			command: "gemini",
+			args: ["--experimental-acp"],
+			authMethod: getGeminiAuthMethod(hasApiKey),
+			env: {
+				GEMINI_CLI_DISABLE_SESSION_PERSISTENCE: "true",
+			},
 		});
 
 		process.on("beforeExit", () => {

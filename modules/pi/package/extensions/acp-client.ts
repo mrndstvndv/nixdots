@@ -1,7 +1,7 @@
 /**
- * Pi-side Gemini ACP Client
+ * Pi-side ACP Client
  * 
- * Lazily spawns `gemini --experimental-acp` and manages ephemeral sessions
+ * Lazily spawns a configurable ACP server process and manages ephemeral sessions
  * via NDJSON over stdin/stdout.
  */
 
@@ -128,17 +128,19 @@ export class AcpConnectionError extends Error {
 }
 
 // ============================================================================
-// GeminiAcpClient
+// AcpClient
 // ============================================================================
 
-export interface GeminiAcpClientOptions {
-  /** Path to gemini CLI binary (default: "gemini" from PATH) */
-  geminiPath?: string;
+export interface AcpClientOptions {
+  /** Command to spawn the ACP server (default: "gemini") */
+  command?: string;
+  /** Arguments to pass to the command (default: []) */
+  args?: string[];
   /** Working directory for new sessions */
   cwd: string;
-  /** Authentication method to use */
-  authMethod?: "login-with-google" | "use-gemini" | "use-vertex-ai";
-  /** Environment variables for the gemini process */
+  /** Authentication method ID to use (optional - will auto-detect if not provided) */
+  authMethod?: string;
+  /** Environment variables for the spawned process */
   env?: NodeJS.ProcessEnv;
 }
 
@@ -150,13 +152,13 @@ interface PendingRequest {
 }
 
 /**
- * Client for gemini-cli's ACP (Agent Client Protocol) mode.
+ * Generic ACP (Agent Client Protocol) client.
  * 
- * Lazily spawns the gemini process on first use and reuses it for multiple
+ * Lazily spawns a configurable server process on first use and reuses it for multiple
  * ephemeral sessions. Each session is isolated and cleaned up after use.
  */
-export class GeminiAcpClient {
-  private options: GeminiAcpClientOptions;
+export class AcpClient {
+  private options: Required<AcpClientOptions>;
   private process: ChildProcess | null = null;
   private rl: readline.Interface | null = null;
   private pendingRequests = new Map<string, PendingRequest>();
@@ -166,11 +168,12 @@ export class GeminiAcpClient {
   private authenticated = false;
   private sessions = new Set<string>();
 
-  constructor(options: GeminiAcpClientOptions) {
+  constructor(options: AcpClientOptions) {
     this.options = {
       cwd: options.cwd,
-      geminiPath: options.geminiPath ?? "gemini",
-      authMethod: options.authMethod ?? "use-gemini",
+      command: options.command ?? "gemini",
+      args: options.args ?? [],
+      authMethod: options.authMethod ?? "",
       env: options.env,
     };
   }
@@ -190,7 +193,7 @@ export class GeminiAcpClient {
   }
 
   /**
-   * Lazily spawn the gemini ACP process
+   * Lazily spawn the ACP process
    */
   private async spawn(): Promise<void> {
     if (this.isConnected) return;
@@ -199,18 +202,16 @@ export class GeminiAcpClient {
       const env = {
         ...process.env,
         ...this.options.env,
-        // Force ephemeral mode - don't persist sessions to disk
-        GEMINI_CLI_DISABLE_SESSION_PERSISTENCE: "true",
       };
 
-      this.process = spawn(this.options.geminiPath, ["--experimental-acp"], {
+      this.process = spawn(this.options.command, this.options.args, {
         stdio: ["pipe", "pipe", "pipe"],
         env,
         cwd: this.options.cwd,
       });
 
       if (!this.process.stdin || !this.process.stdout) {
-        reject(new AcpConnectionError("Failed to spawn gemini process: stdio not available"));
+        reject(new AcpConnectionError(`Failed to spawn ${this.options.command}: stdio not available`));
         return;
       }
 
@@ -218,7 +219,7 @@ export class GeminiAcpClient {
       this.process.stderr?.on("data", (data: Buffer) => {
         const msg = data.toString().trim();
         if (msg && (msg.includes("error") || msg.includes("Error"))) {
-          console.error("[gemini-acp]", msg);
+          console.error(`[acp-client] ${msg}`);
         }
       });
 
@@ -228,7 +229,7 @@ export class GeminiAcpClient {
       });
 
       this.process.on("error", (err) => {
-        reject(new AcpConnectionError(`Failed to spawn gemini: ${err.message}`));
+        reject(new AcpConnectionError(`Failed to spawn ${this.options.command}: ${err.message}`));
       });
 
       // Set up NDJSON line reader
@@ -267,7 +268,7 @@ export class GeminiAcpClient {
         return;
       }
     } catch (err) {
-      console.error("[gemini-acp] Failed to parse message:", line);
+      console.error("[acp-client] Failed to parse message:", line);
     }
   }
 
@@ -369,7 +370,11 @@ export class GeminiAcpClient {
       return;
     }
 
-    const authMethod = methodId || this.getAuthMethodId();
+    const authMethod = methodId || this.options.authMethod;
+    if (!authMethod) {
+      throw new AcpError(-32602, "No authentication method specified");
+    }
+
     await this.request("authenticate", { methodId: authMethod }, 60000);
     this.authenticated = true;
   }
@@ -387,34 +392,11 @@ export class GeminiAcpClient {
   }
 
   /**
-   * Get the auth method ID from options
-   * Maps our options to ACP protocol auth method IDs
-   */
-  private getAuthMethodId(): string {
-    const map: Record<string, string> = {
-      "login-with-google": "oauth-personal",
-      "use-gemini": "gemini-api-key",
-      "use-vertex-ai": "vertex-ai",
-    };
-    return map[this.options.authMethod!] || "gemini-api-key";
-  }
-
-  /**
    * Create a new ephemeral session
    */
   async newSession(mcpServers?: McpServerConfig[]): Promise<Session> {
     if (!this.initialized) {
       await this.initialize();
-    }
-
-    // Authenticate if needed (skip if using API key - CLI handles it automatically)
-    if (!this.authenticated && this.options.authMethod !== "use-gemini") {
-      try {
-        await this.authenticate();
-      } catch (err) {
-        // Auth failed but session might still work if CLI has cached credentials
-        console.error("[gemini-acp] Auth warning:", err);
-      }
     }
 
     const result = await this.request("session/new", {
@@ -563,7 +545,7 @@ export class GeminiAcpClient {
 export class Session {
   constructor(
     public readonly id: string,
-    private client: GeminiAcpClient,
+    private client: AcpClient,
     private onDispose: () => void
   ) {}
 
@@ -595,8 +577,13 @@ export class Session {
 // ============================================================================
 
 export interface AcpPoolOptions {
-  geminiPath?: string;
-  authMethod?: "login-with-google" | "use-gemini" | "use-vertex-ai";
+  /** Command to spawn the ACP server */
+  command?: string;
+  /** Arguments to pass to the command */
+  args?: string[];
+  /** Authentication method ID to use */
+  authMethod?: string;
+  /** Environment variables for the spawned process */
   env?: NodeJS.ProcessEnv;
 }
 
@@ -605,7 +592,7 @@ export interface AcpPoolOptions {
  */
 export interface AcpPool {
   /** Get or create the shared client */
-  getClient(): Promise<GeminiAcpClient>;
+  getClient(): Promise<AcpClient>;
   /** Create a new ephemeral session */
   newSession(mcpServers?: McpServerConfig[]): Promise<Session>;
   /** Shutdown the pool and cleanup */
@@ -615,11 +602,11 @@ export interface AcpPool {
 }
 
 /**
- * Creates a shared ACP client pool for managing gemini sessions.
+ * Creates a shared ACP client pool for managing sessions.
  * Lazily initializes on first use and reuses connections.
  */
 export function createAcpPool(options: AcpPoolOptions & { cwd: string }): AcpPool {
-  let client: GeminiAcpClient | null = null;
+  let client: AcpClient | null = null;
   let hasBeenUsed = false;
 
   return {
@@ -627,10 +614,11 @@ export function createAcpPool(options: AcpPoolOptions & { cwd: string }): AcpPoo
       return !hasBeenUsed;
     },
 
-    async getClient(): Promise<GeminiAcpClient> {
+    async getClient(): Promise<AcpClient> {
       if (!client) {
-        client = new GeminiAcpClient({
-          geminiPath: options.geminiPath,
+        client = new AcpClient({
+          command: options.command,
+          args: options.args,
           cwd: options.cwd,
           authMethod: options.authMethod,
           env: options.env,
