@@ -1,28 +1,32 @@
 { pkgs, lib, config, ... }:
+let
+  # Build the pi extensions package with its npm dependencies
+  piExtensions = pkgs.buildNpmPackage {
+    pname = "nixdots-pi-extensions";
+    version = "1.0.0";
+    src = ./package;
+    npmDepsHash = "sha256-irGzx6WrtHxBMyQcJvdScqrkoha9Fphs7v4UXrBYtik=";
+    buildPhase = "true";
+    installPhase = ''
+      mkdir -p $out
+      cp -r . $out/
+    '';
+  };
+
+  # Generate settings.json with the nix store path baked in
+  piSettings = builtins.fromJSON (builtins.readFile ./settings.json);
+  piSettingsFinal = piSettings // {
+    # Reference the package directly in the nix store (fully deterministic)
+    packages = [ "${piExtensions}" ];
+  };
+in
 {
   home.packages = with pkgs; [
     ddgr
   ];
 
   home.file.".pi/agent/AGENTS.md".source = ./AGENTS.md;
-  home.file.".pi/agent/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nixdots/modules/pi/settings.json";
-
-  # Copy package to ~/.pi/packages/nixdots-extensions to allow node_modules to work
-  # (Symlinks resolve to Nix store where node_modules doesn't exist)
-  home.activation.installPiExtensions = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    pkgDir="$HOME/.pi/packages/nixdots-extensions"
-    mkdir -p "$pkgDir"
-    
-    # Remove managed files/dirs to ensure clean slate (avoids stale files)
-    # node_modules and package-lock.json are NOT removed
-    rm -rf "$pkgDir/extensions"
-    rm -f "$pkgDir/package.json"
-    rm -f "$pkgDir/README.md"
-
-    # Copy fresh content from store (dereferencing symlinks with -L)
-    cp -Lr ${./package}/* "$pkgDir"/
-
-    # Ensure we have write permissions on everything so we can update/delete next time
-    chmod -R u+w "$pkgDir"
-  '';
+  
+  # Pure, generated settings.json - no symlinks, no mutable state
+  home.file.".pi/agent/settings.json".text = builtins.toJSON piSettingsFinal;
 }
