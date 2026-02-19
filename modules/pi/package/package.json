@@ -6,7 +6,8 @@
   "type": "module",
   "dependencies": {
     "vscode-languageserver-protocol": "^3.17.5",
-    "pi-subagents": "*"
+    "pi-subagents": "*",
+    "pi-web-access": "^0.10.2"
   },
   "pi": {
     "extensions": [
@@ -17,7 +18,8 @@
       "./extensions/file-command.ts",
       "./extensions/handoff.ts",
       "./node_modules/pi-subagents/index.ts",
-      "./node_modules/pi-subagents/notify.ts"
+      "./node_modules/pi-subagents/notify.ts",
+      "./node_modules/pi-web-access/index.ts"
     ]
   }
 }
