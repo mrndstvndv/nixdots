@@ -12,9 +12,9 @@
  * The generated prompt appears as a draft in the editor for review/editing.
  */
 
-import { spawn } from "child_process";
 import type { ExtensionAPI, SessionEntry } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
+import { createAcpPool, type AcpPool } from "./gemini-acp-client.js";
 
 const SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
 
@@ -38,6 +38,52 @@ Files involved:
 ## Task
 [Clear description of what to do next based on user's goal]`;
 
+/** Global ACP pool - shared across all handoff calls for this pi instance */
+let acpPool: AcpPool | null = null;
+
+/** Get or create the global ACP pool */
+function getAcpPool(cwd: string): AcpPool {
+	if (!acpPool) {
+		const hasApiKey = !!process.env.GEMINI_API_KEY;
+		acpPool = createAcpPool({
+			cwd,
+			authMethod: hasApiKey ? "use-gemini" : "login-with-google",
+		});
+
+		process.on("beforeExit", () => {
+			acpPool?.shutdown().catch(() => {});
+		});
+	}
+	return acpPool;
+}
+
+function formatHandoffError(error: unknown): string {
+	if (!(error instanceof Error)) {
+		return "Handoff failed. See logs for details.";
+	}
+
+	const message = error.message.toLowerCase();
+	if (message.includes("exhausted your daily quota")) {
+		return "Gemini quota exceeded for the current model. Try again later, switch models, or use a different API key.";
+	}
+	if (message.includes("api key is missing")) {
+		return "Gemini API key not configured. Set GEMINI_API_KEY or run 'gemini auth login'.";
+	}
+	if (message.includes("chat not initialized")) {
+		return "Gemini session failed to initialize. Try again or restart pi.";
+	}
+
+	return error.message;
+}
+
+/** Update loader message by accessing internal component */
+function updateLoaderMessage(loader: BorderedLoader, message: string): void {
+	// BorderedLoader doesn't expose setMessage, so we use type assertion
+	// to access the internal Loader component
+	const internal = loader as unknown as { loader: { setMessage: (m: string) => void } };
+	internal.loader?.setMessage(message);
+}
+
 export default function (pi: ExtensionAPI) {
 	pi.registerCommand("handoff", {
 		description: "Transfer context to a new focused session",
@@ -53,7 +99,6 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			// Gather conversation context from current branch
 			const branch = ctx.sessionManager.getBranch();
 			const messages = branch
 				.filter((entry): entry is SessionEntry & { type: "message" } => entry.type === "message")
@@ -64,86 +109,71 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			// Convert to LLM format and serialize
 			const llmMessages = convertToLlm(messages);
 			const conversationText = serializeConversation(llmMessages);
 			const currentSessionFile = ctx.sessionManager.getSessionFile();
+			const pool = getAcpPool(ctx.sessionManager.cwd);
 
-			// Generate the handoff prompt with loader UI
+			let lastError: string | null = null;
+
 			const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
-				const loader = new BorderedLoader(tui, theme, "Initializing Gemini CLI...");
+				const initialMessage = pool.isFirstUse
+					? "Connecting to Gemini..."
+					: "Generating handoff prompt...";
+
+				const loader = new BorderedLoader(tui, theme, initialMessage);
 				loader.onAbort = () => done(null);
 
-				// Access the internal loader to update message dynamically
 				const updateMessage = (msg: string) => {
-					(loader as unknown as { loader: { setMessage: (m: string) => void } }).loader.setMessage(msg);
+					updateLoaderMessage(loader, msg);
 					tui.requestRender();
 				};
 
 				const doGenerate = async () => {
 					const combinedPrompt = `${SYSTEM_PROMPT}\n\n## Conversation History\n\n${conversationText}\n\n## User's Goal for New Thread\n\n${goal}`;
 
-					// Spawn gemini CLI with fixed model - use stdin for long prompt
-					return new Promise<string>((resolve, reject) => {
-						const child = spawn("gemini", ["-m", "gemini-3-flash-preview"], {
-							stdio: ["pipe", "pipe", "pipe"],
-						});
+					updateMessage("Creating session...");
+					const session = await pool.newSession();
 
-						let stdout = "";
-						let stderr = "";
-						let firstChunk = true;
+					if (loader.signal?.aborted) {
+						session.dispose();
+						return null;
+					}
 
-						// Kill child if loader is aborted
-						if (loader.signal) {
-							loader.signal.addEventListener("abort", () => child.kill());
+					try {
+						updateMessage("Generating...");
+						
+						// Stream text chunks to update the loader in real-time
+						let streamedText = "";
+						const promptResult = await session.prompt(
+							[{ type: "text", text: combinedPrompt }],
+							(chunk) => {
+								streamedText = chunk;
+								// Show last ~150 chars for real-time feedback
+								const preview = chunk.slice(-150).replace(/\s+/g, " ").trim();
+								if (preview) updateMessage(preview);
+							}
+						);
+
+						if (promptResult.stopReason === "error") {
+							throw new Error("Generation failed - the model may be unavailable or quota exceeded");
 						}
 
-						child.stdout.on("data", (chunk: Buffer) => {
-							stdout += chunk.toString();
-							if (firstChunk) {
-								firstChunk = false;
-								updateMessage("Generating handoff prompt...");
-							}
-						});
+						const finalText = promptResult.text || streamedText;
+						if (!finalText?.trim()) {
+							throw new Error("Empty response from Gemini - session may need authentication");
+						}
 
-						child.stderr.on("data", (chunk: Buffer) => {
-							stderr += chunk.toString();
-						});
-
-						child.on("error", (err: NodeJS.ErrnoException) => {
-							if (err.code === "ENOENT") {
-								reject(new Error("gemini CLI not found. Install from https://github.com/google-gemini/gemini-cli"));
-								return;
-							}
-							reject(err);
-						});
-
-						child.on("close", (code) => {
-							// Check for auth errors in stderr
-							if (stderr && /auth|authenticate|not authenticated|unauthoriz|login/i.test(stderr)) {
-								reject(new Error("Not authenticated. Run 'gemini auth login' first."));
-								return;
-							}
-
-							if (code && code !== 0) {
-								reject(new Error(stderr || `gemini exited with code ${code}`));
-								return;
-							}
-
-							resolve(stdout.trim());
-						});
-
-						// Write prompt to stdin instead of using -p flag
-						// This avoids ARG_MAX limits for long conversations
-						child.stdin.write(combinedPrompt);
-						child.stdin.end();
-					});
+						return finalText;
+					} finally {
+						session.dispose();
+					}
 				};
 
 				doGenerate()
 					.then(done)
 					.catch((err) => {
-						console.error("Handoff generation failed:", err);
+						lastError = formatHandoffError(err);
 						done(null);
 					});
 
@@ -151,29 +181,22 @@ export default function (pi: ExtensionAPI) {
 			});
 
 			if (result === null) {
-				ctx.ui.notify("Cancelled", "info");
+				ctx.ui.notify(lastError ?? "Cancelled", lastError ? "error" : "info");
 				return;
 			}
 
-			// Let user edit the generated prompt
 			const editedPrompt = await ctx.ui.editor("Edit handoff prompt", result);
-
 			if (editedPrompt === undefined) {
 				ctx.ui.notify("Cancelled", "info");
 				return;
 			}
 
-			// Create new session with parent tracking
-			const newSessionResult = await ctx.newSession({
-				parentSession: currentSessionFile,
-			});
-
+			const newSessionResult = await ctx.newSession({ parentSession: currentSessionFile });
 			if (newSessionResult.cancelled) {
 				ctx.ui.notify("New session cancelled", "info");
 				return;
 			}
 
-			// Set the edited prompt in the main editor for submission
 			ctx.ui.setEditorText(editedPrompt);
 			ctx.ui.notify("Handoff ready. Submit when ready.", "info");
 		},
