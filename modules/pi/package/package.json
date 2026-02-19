@@ -13,7 +13,8 @@
       "./extensions/lsp/lsp-tool.ts",
       "./extensions/kimi/kimi.ts",
       "./extensions/tmux-notify.ts",
-      "./extensions/file-command.ts"
+      "./extensions/file-command.ts",
+      "./extensions/handoff.ts"
     ]
   }
 }

@@ -1,11 +1,12 @@
 {
-  "lastChangelogVersion": "0.52.5",
+  "lastChangelogVersion": "0.53.0",
   "packages": [
     "~/.pi/packages/nixdots-extensions"
   ],
   "lsp": {
     "hookMode": "edit_write"
   },
-  "defaultProvider": "kimi",
-  "defaultModel": "kimi-k2.5"
+  "defaultProvider": "github-copilot",
+  "defaultModel": "gpt-5-mini",
+  "hideThinkingBlock": false
 }
