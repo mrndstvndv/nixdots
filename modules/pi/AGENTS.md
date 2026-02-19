@@ -49,3 +49,4 @@ function process(user: User | null) {
 - Use `uv` instead of `python` (e.g., `uv run script.py`)
 - Use `bun` instead of `node` or `npm`
 - Use `bunx` instead of `npx`
+- When moving or renaming files, prefer the shell mv command (via bash) instead of reading and rewriting files with tool calls — it saves tokens and preserves file metadata. Use read/edit/write only for content edits.
