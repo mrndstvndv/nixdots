@@ -9,13 +9,38 @@
       # This runs on the SAME tmux server as your main session, just isolated.
 
       SESSION_NAME="webdav"
-      MOUNT_POINT="/Volumes/portable"
       PORT="6969"
       USER="steven"
       HTPASSWD_FILE="$HOME/.config/rclone/htpasswd"
+      CACHE_DIR="$HOME/.cache/rclone/vfs"
 
-      # Ensure config directory exists
-      mkdir -p "$HOME/.config/rclone"
+      COMPOSITE_ROOT="/Volumes/webdav"
+
+      # Ensure base directories exist
+      mkdir -p "$HOME/.config/rclone" "$CACHE_DIR" "$COMPOSITE_ROOT"
+
+      mounted_count=0
+      for target in "/Volumes/realme" "/Volumes/portable"; do
+          link="$COMPOSITE_ROOT/$(basename "$target")"
+          if [ -d "$target" ]; then
+              rm -f "$link"
+              ln -s "$target" "$link"
+              mounted_count=$((mounted_count + 1))
+          else
+              [ -L "$link" ] && rm "$link"
+          fi
+      done
+
+      if [ "$mounted_count" -eq 0 ]; then
+          echo "Warning: no target volume mounted for WebDAV."
+          echo "Please mount /Volumes/realme or /Volumes/portable."
+          exit 1
+      fi
+
+      if [ ! -d "$COMPOSITE_ROOT" ]; then
+          echo "Failed to prepare WebDAV root at $COMPOSITE_ROOT."
+          exit 1
+      fi
 
       # Check if htpasswd file exists, if not, create it
       if [ ! -f "$HTPASSWD_FILE" ]; then
@@ -26,13 +51,6 @@
           echo "Password set."
       fi
 
-      # Ensure the mount point exists
-      if [ ! -d "$MOUNT_POINT" ]; then
-          echo "Warning: $MOUNT_POINT does not exist!"
-          echo "Please mount your drive or create the directory."
-          exit 1
-      fi
-
       # Check if session already exists
       if ${pkgs.tmux}/bin/tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
           exit 0
@@ -40,7 +58,7 @@
 
       # Start new session
       ${pkgs.tmux}/bin/tmux new-session -d -s "$SESSION_NAME" \
-          "${pkgs.rclone}/bin/rclone serve webdav '$MOUNT_POINT' --addr 0.0.0.0:$PORT --htpasswd '$HTPASSWD_FILE' --vfs-cache-mode writes; read"
+          "${pkgs.rclone}/bin/rclone serve webdav '$COMPOSITE_ROOT' --addr 0.0.0.0:$PORT --htpasswd '$HTPASSWD_FILE' --vfs-cache-mode writes --cache-dir '$CACHE_DIR' --copy-links; read"
     '';
     executable = true;
   };
