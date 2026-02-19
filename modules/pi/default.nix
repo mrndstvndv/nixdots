@@ -27,6 +27,9 @@ in
 
   home.file.".pi/agent/AGENTS.md".source = ./AGENTS.md;
   
+  # Subagent definitions managed by nix
+  home.file.".pi/agent/agents/scout.md".source = ./agents/scout.md;
+  
   # Pure, generated settings.json - no symlinks, no mutable state
   home.file.".pi/agent/settings.json".text = builtins.toJSON piSettingsFinal;
 }
