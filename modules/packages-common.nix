@@ -1,4 +1,4 @@
-{ config, pkgs, amp, ... }:
+{ config, pkgs, amp, codex, ... }:
 {
   home.packages = [
     pkgs.bun
@@ -17,6 +17,10 @@
     pkgs.aria2
     pkgs.unzip
     (amp.lib.mkAmp pkgs.system pkgs)
+
+    # OpenAI Codex CLI from external flake input
+    # Use the flake's package matching our system
+    (builtins.getAttr pkgs.system codex.packages).codex
   ];
 
   programs.direnv = {

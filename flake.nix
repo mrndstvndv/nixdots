@@ -32,9 +32,15 @@
       # Reuse our home-manager input inside nix-on-droid
       inputs.home-manager.follows = "home-manager";
     };
+
+    # Codex CLI flake from GitHub
+    codex = {
+      url = "github:sadjow/codex-cli-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, amp, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, amp, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
@@ -56,7 +62,7 @@
             name = "steven";
             home = "/Users/steven";
           };
-            home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode amp; };
+            home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode amp codex; };
            home-manager.backupFileExtension = "backup";
           home-manager.users.steven = {
             imports = [
@@ -95,7 +101,7 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#proputer
     darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim homebrew-nix homebrew-core homebrew-cask homebrew-smctemp; };
+      specialArgs = { inherit zen home-manager; inherit (inputs) my-neovim homebrew-nix homebrew-core homebrew-cask homebrew-smctemp codex; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
@@ -118,7 +124,7 @@
     # Standalone Home Manager for Alpine chroot (Termux)
     homeConfigurations."alpine" = home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages.aarch64-linux;
-      extraSpecialArgs = { inherit my-neovim opencode amp; };
+      extraSpecialArgs = { inherit my-neovim opencode amp codex; };
       modules = [
         ./alpine/home.nix
         {
