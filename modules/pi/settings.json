@@ -8,6 +8,5 @@
   },
   "defaultProvider": "github-copilot",
   "defaultModel": "gpt-5-mini",
-  "hideThinkingBlock": false,
-  "quietStartup": true
+  "hideThinkingBlock": false
 }
