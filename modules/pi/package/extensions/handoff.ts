@@ -53,7 +53,8 @@ function getAcpPool(cwd: string): AcpPool {
 		acpPool = createAcpPool({
 			cwd,
 			command: "gemini",
-			args: ["--experimental-acp"],
+			// Use the Flash model preview for faster/cheaper handoffs
+			args: ["flash", "gemini-3-flash-preview", "--experimental-acp"],
 			authMethod: getGeminiAuthMethod(hasApiKey),
 			env: {
 				GEMINI_CLI_DISABLE_SESSION_PERSISTENCE: "true",
