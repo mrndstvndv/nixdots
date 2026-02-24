@@ -211,7 +211,6 @@ function getContextInfo() {
       { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/extensions/tmux-notify.ts" },
       { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/node_modules/pi-subagents/index.ts" },
       { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/node_modules/pi-subagents/notify.ts" },
-      { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/node_modules/pi-web-access/index.ts" },
       { scope: "user" as const, path: joinHome(".pi/agent/extensions/welcome.ts") }
     ]
   };
