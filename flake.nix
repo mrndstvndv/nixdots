@@ -14,6 +14,10 @@
     amp.url = "github:mrndstvndv/amp-flake";
     amp.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    helium = {
+      url = "github:schembriaiden/helium-browser-nix-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     homebrew-core = {
       url = "github:homebrew/homebrew-core";
       flake = false;
@@ -40,7 +44,7 @@
     };
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, amp, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, zen, home-manager, my-neovim, opencode, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
    let
       configuration = { pkgs, zen, home-manager, nixpkgs, ... }:
        let
@@ -62,7 +66,7 @@
             name = "steven";
             home = "/Users/steven";
           };
-            home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode amp codex; };
+            home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode amp helium codex; };
            home-manager.backupFileExtension = "backup";
           home-manager.users.steven = {
             imports = [

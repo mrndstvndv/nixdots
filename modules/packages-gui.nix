@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, helium, ... }:
 {
   imports = [ ./ghostty.nix ];
 
@@ -7,5 +7,6 @@
     pkgs.localsend
     pkgs.jetbrains.idea
     pkgs.qbittorrent
+    helium.packages.${pkgs.system}.default
   ];
 }
