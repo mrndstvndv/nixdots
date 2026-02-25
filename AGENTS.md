@@ -1,5 +1,5 @@
-## Github interactions
-When you find yourself needing to browse code hosted in github you can use github cli via `gh`
+# Testing 
+sudo -H nix run nix-darwin/master#darwin-rebuild -- build --flake .#proputer
 
 ## Commit Guidelines
 
