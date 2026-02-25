@@ -32,5 +32,6 @@
   # Common PATH additions
   home.sessionPath = [
     "${config.home.homeDirectory}/.bun/bin"
+    "${config.home.homeDirectory}/.config/nixdots/bin"
   ];
 }
