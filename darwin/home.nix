@@ -7,7 +7,6 @@
 
   home.packages = [
     # pkgs.daisydisk
-    pkgs.raycast
     pkgs.tailscale
     pkgs.rclone
     pkgs.apacheHttpd # for htpasswd
