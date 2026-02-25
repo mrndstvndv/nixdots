@@ -77,11 +77,12 @@
  	zenWithPolicies
            ];
 
-
+      # For darwin-nix to work on determinate nix
+      nix.enable = false;
 
       # Necessary for using flakes on this system.
-      nix.settings.experimental-features = "nix-command flakes";
-      nix.optimise.automatic = true;
+      # nix.settings.experimental-features = "nix-command flakes";
+      # nix.optimise.automatic = true;
 
       # Enable alternative shell support in nix-darwin.
       # programs.fish.enable = true;
