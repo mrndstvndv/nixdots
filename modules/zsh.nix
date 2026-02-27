@@ -58,7 +58,7 @@
 
       # Start new session
       ${pkgs.tmux}/bin/tmux new-session -d -s "$SESSION_NAME" \
-          "${pkgs.rclone}/bin/rclone serve webdav '$COMPOSITE_ROOT' --addr 0.0.0.0:$PORT --htpasswd '$HTPASSWD_FILE' --vfs-cache-mode writes --cache-dir '$CACHE_DIR' --copy-links; read"
+          "${pkgs.rclone}/bin/rclone serve webdav '$COMPOSITE_ROOT' --addr 0.0.0.0:$PORT --htpasswd '$HTPASSWD_FILE' --vfs-cache-mode writes --buffer-size 256M --vfs-read-ahead 128M --cache-dir '$CACHE_DIR' --copy-links; read"
     '';
     executable = true;
   };
