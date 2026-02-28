@@ -1,4 +1,4 @@
-{ pkgs, my-neovim ? null, ... }:
+{ pkgs, lib, my-neovim ? null, ... }:
 let
   system = pkgs.stdenv.hostPlatform.system;
   useMyNeovim =

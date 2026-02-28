@@ -40,9 +40,14 @@
       url = "github:sadjow/codex-cli-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixos-wsl = {
+      url = "github:nix-community/NixOS-WSL/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, my-neovim, opencode, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, my-neovim, opencode, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, nixos-wsl }:
    let
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
@@ -94,6 +99,48 @@
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
         configuration 
+      ];
+    };
+
+    # NixOS-WSL configuration
+    # Build using: sudo nixos-rebuild switch --flake .#nixos-wsl
+    nixosConfigurations."nixos-wsl" = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        nixos-wsl.nixosModules.default
+        inputs.home-manager.nixosModules.home-manager
+        {
+          imports = [ ./modules/fish.nix ];
+          system.stateVersion = "25.05";
+          wsl.enable = true;
+          wsl.defaultUser = "nixos";
+          users.users.nixos = {
+            isNormalUser = true;
+            home = "/home/nixos";
+            shell = nixpkgs.legacyPackages.x86_64-linux.fish;
+          };
+          home-manager.extraSpecialArgs = { inherit (inputs) my-neovim amp codex; };
+          home-manager.users.nixos = {
+            imports = [
+              ./wsl/home.nix
+            ];
+          };
+        }
+      ];
+    };
+
+    # Standalone Home Manager for WSL (without system config)
+    homeConfigurations."wsl" = home-manager.lib.homeManagerConfiguration {
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      extraSpecialArgs = { inherit my-neovim amp codex; };
+      modules = [
+        ./wsl/home.nix
+        {
+          nixpkgs.config = {
+            allowUnfree = true;
+            allowUnfreePredicate = (_: true);
+          };
+        }
       ];
     };
 
