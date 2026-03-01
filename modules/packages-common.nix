@@ -16,7 +16,6 @@
     pkgs.jq
     pkgs.aria2
     pkgs.unzip
-    pkgs.opencode
     (amp.lib.mkAmp pkgs.system pkgs)
 
     # OpenAI Codex CLI from external flake input
