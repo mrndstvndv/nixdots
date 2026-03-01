@@ -13,7 +13,8 @@ Sacrifice grammar for accuracy + conciseness. Context bloat matters. Be direct.
 - Guard nulls early. Use `?.` and `??`.
 - Self-documenting code. Comments explain "why" only.
 - Test edge cases.
-- Don't clone github repos but use gh cli to explore their codebase.
+- Dont implement stuff or write code without the user explicitly saying you are allowed to. The default state is planning, after we make a plan ask the user if it's safe to procceed to writing code
+- If you need to inspect a repo, clone it to ~/.pi/gh/ with --depth 1 if it doesn't already exist. Use the local clone for all subsequent searching and inspection.
 
 ## Example
 ```typescript
