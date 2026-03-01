@@ -7,10 +7,15 @@
 
   home.packages = [
     # pkgs.daisydisk
+    pkgs.nushell
     pkgs.tailscale
     pkgs.rclone
     pkgs.apacheHttpd # for htpasswd
   ];
+
+  home.sessionVariables = {
+    SHELL = "${pkgs.nushell}/bin/nu";
+  };
 
   # Nix environment for login shells and POSIX compatibility
   home.file.".profile".text = ''

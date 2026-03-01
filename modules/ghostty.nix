@@ -3,10 +3,10 @@
   programs.ghostty = {
     enable = true;
     package = if pkgs.stdenv.isDarwin then pkgs.ghostty-bin else pkgs.ghostty;
-    enableFishIntegration = true;
+    enableFishIntegration = false;
 
     settings = {
-      command = "${pkgs.fish}/bin/fish --login -c '${pkgs.tmux}/bin/tmux new -As0'";
+      command = "${pkgs.nushell}/bin/nu -c '${pkgs.tmux}/bin/tmux new -As0 ${pkgs.nushell}/bin/nu'";
       background-opacity = "0.9";
       background-blur = true;
       theme = "Gruvbox Dark Hard";
