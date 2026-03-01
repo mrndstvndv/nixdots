@@ -125,9 +125,9 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	// Track user messages for better undo descriptions
-	pi.on("message_end", async (event) => {
+	pi.on("message_end", async (event, ctx) => {
 		if (event.message.role === "user") {
-			lastUserMessageId = pi.sessionManager.getLeafEntry()?.id;
+			lastUserMessageId = ctx.sessionManager.getLeafEntry()?.id;
 		}
 	});
 
