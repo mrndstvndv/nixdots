@@ -52,8 +52,8 @@ in
       set -g popup-border-lines rounded
       set -g popup-border-style 'fg=colour245'
 
-      set-option -g default-shell "${pkgs.fish}/bin/fish"
-      set-option -g default-command "${pkgs.fish}/bin/fish -i"
+      set-option -g default-shell "${pkgs.nushell}/bin/nu"
+      set-option -g default-command "${pkgs.nushell}/bin/nu -i"
 
       # toggle lazygit pane in current directory
       bind-key l display-popup -E -d "#{pane_current_path}" -w 90% -h 90% "lazygit"

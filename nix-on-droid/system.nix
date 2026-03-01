@@ -14,7 +14,7 @@
 
   # Set the default login shell for the nix-on-droid user.
   # This must be the *binary path*, not the package.
-  user.shell = "${pkgs.fish}/bin/fish";
+  user.shell = "${pkgs.nushell}/bin/nu";
 
   # Configure home-manager (nix-on-droid integrates it for us).
   home-manager = {
@@ -26,7 +26,7 @@
     # (so ./home.nix -> ../modules/neovim.nix can see it).
     extraSpecialArgs = { inherit my-neovim; };
 
-    # Reuse our shared Home Manager config, which pulls in fish, tmux,
+    # Reuse our shared Home Manager config, which pulls in nushell, tmux,
     # neovim, and common packages.
     config = import ./home.nix;
   };

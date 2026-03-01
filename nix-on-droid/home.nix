@@ -2,7 +2,7 @@
 {
   nixpkgs.config.allowUnfree = true;
   imports = [
-    ../modules/fish.nix
+    ../modules/nushell.nix
     ../modules/tmux.nix
     ../modules/neovim.nix
     ../modules/packages-common.nix

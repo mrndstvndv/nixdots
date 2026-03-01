@@ -110,14 +110,14 @@
         nixos-wsl.nixosModules.default
         inputs.home-manager.nixosModules.home-manager
         {
-          imports = [ ./modules/fish.nix ];
+          imports = [ ./modules/nushell.nix ];
           system.stateVersion = "25.05";
           wsl.enable = true;
           wsl.defaultUser = "nixos";
           users.users.nixos = {
             isNormalUser = true;
             home = "/home/nixos";
-            shell = nixpkgs.legacyPackages.x86_64-linux.fish;
+            shell = nixpkgs.legacyPackages.x86_64-linux.nushell;
           };
           home-manager.extraSpecialArgs = { inherit (inputs) my-neovim amp codex; };
           home-manager.users.nixos = {
