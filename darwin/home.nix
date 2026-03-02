@@ -17,6 +17,7 @@
     SHELL = "${pkgs.nushell}/bin/nu";
   };
 
+  # Darwin-specific nushell config
   programs.nushell = {
     environmentVariables = {
       UV_CACHE_DIR = "/Volumes/realme/.cache/uv";
