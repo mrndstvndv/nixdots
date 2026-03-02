@@ -45,6 +45,7 @@ function process(user: User | null) {
 
 ## Search
 - Web Search: `ddgr --json "query"`
+- After running ddgr, you may use `web_fetch` to retrieve the full content of any search result URL if you need more details
 
 ## Tool Preferences
 - Use `uv` instead of `python` (e.g., `uv run script.py`)
