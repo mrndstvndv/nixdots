@@ -16,7 +16,8 @@
       "./extensions/file-command.ts",
       "./extensions/handoff.ts",
       "./extensions/web-fetch.ts",
-      "./extensions/git-undo.ts"
+      "./extensions/git-undo.ts",
+      "./extensions/opencode-free.ts"
     ]
   }
 }
