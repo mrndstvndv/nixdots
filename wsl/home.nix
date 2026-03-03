@@ -17,6 +17,7 @@
 
   home.packages = [
     pkgs.tzdata
+    pkgs.python3
   ];
 
   home.sessionVariables = {
