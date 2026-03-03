@@ -110,15 +110,18 @@
         nixos-wsl.nixosModules.default
         inputs.home-manager.nixosModules.home-manager
         {
-          imports = [ ./modules/nushell.nix ];
           system.stateVersion = "25.05";
+          nix.settings.experimental-features = [ "nix-command" "flakes" ];
           wsl.enable = true;
           wsl.defaultUser = "nixos";
           users.users.nixos = {
             isNormalUser = true;
+            extraGroups = [ "wheel" ];
             home = "/home/nixos";
             shell = nixpkgs.legacyPackages.x86_64-linux.nushell;
           };
+          security.sudo.enable = true;
+          security.sudo.execWheelOnly = true;
           home-manager.extraSpecialArgs = { inherit (inputs) my-neovim amp codex; };
           home-manager.users.nixos = {
             imports = [
