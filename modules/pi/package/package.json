@@ -17,7 +17,8 @@
       "./extensions/handoff.ts",
       "./extensions/web-fetch.ts",
       "./extensions/git-undo.ts",
-      "./extensions/opencode-free.ts"
+      "./extensions/opencode-free.ts",
+      "./extensions/kilocode-free.ts"
     ]
   }
 }
