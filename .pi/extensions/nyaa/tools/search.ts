@@ -67,15 +67,17 @@ export async function executeSearch(
       }
     }
 
+    const limit = params.limit ?? 10;
+
     // Build summary for LLM - show global indices
     const summary = [
       `Found ${newCount} new result(s)${duplicateCount > 0 ? `, ${duplicateCount} duplicate(s) skipped` : ""}:`,
       "",
-      ...displayIndices.slice(0, 20).map((globalIdx, i) => {
+      ...displayIndices.slice(0, limit).map((globalIdx, i) => {
         const item = sessionItems[globalIdx]!;
         return `${globalIdx}. ${formatItemForDisplay(item)}`;
       }),
-      displayIndices.length > 20 ? `\n... and ${displayIndices.length - 20} more` : "",
+      displayIndices.length > limit ? `\n... and ${displayIndices.length - limit} more` : "",
       "",
       "Use nyaa_queue_add with global indices (first column) to add items to queue.",
     ].join("\n");

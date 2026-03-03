@@ -53,6 +53,7 @@ export interface SearchParams {
   filter?: "trusted" | "remakes" | "no-filter";
   user?: string;
   sort?: SortOption;
+  limit?: number;
 }
 
 export interface SaveParams {

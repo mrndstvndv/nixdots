@@ -118,6 +118,13 @@ export default function (pi: ExtensionAPI) {
           Type.Literal("size_asc", { description: "Smallest first" }),
         ])
       ),
+      limit: Type.Optional(
+        Type.Number({
+          description: "Number of items to return in the summary (default: 10, max: 50)",
+          minimum: 1,
+          maximum: 50,
+        })
+      ),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       onUpdate?.({ content: [{ type: "text", text: "Searching nyaa.si..." }] });
@@ -162,8 +169,9 @@ export default function (pi: ExtensionAPI) {
         return new Text(theme.fg("muted", "○ No results found"), 0, 0);
       }
 
-      // Show first 10 items with global indices
-      const displayCount = options.expanded ? Math.min(items.length, 20) : Math.min(items.length, 10);
+      // Show items with global indices
+      const limit = (result.details as NyaaItem[] | undefined)?.length ?? 10;
+      const displayCount = Math.min(items.length, limit);
       const lines: string[] = [];
 
       lines.push(theme.fg("success", `✓ Found ${count} result(s)`));
@@ -202,10 +210,8 @@ export default function (pi: ExtensionAPI) {
         lines.push(`${theme.fg("dim", idxStr)} ${theme.fg("text", title)} ${theme.fg("muted", size)} ${seeders}/${leechers}  ${theme.fg("dim", dateStr)}`);
       }
 
-      if (!options.expanded && items.length > 10) {
-        lines.push(theme.fg("dim", `... and ${items.length - 10} more (${keyHint("expandTools", "expand")})`));
-      } else if (options.expanded && items.length > 20) {
-        lines.push(theme.fg("dim", `... and ${items.length - 20} more`));
+      if (items.length > displayCount) {
+        lines.push(theme.fg("dim", `... and ${items.length - displayCount} more`));
       }
 
       return new Text(lines.join("\n"), 0, 0);
