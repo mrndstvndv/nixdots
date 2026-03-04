@@ -2,7 +2,6 @@
 
 import { fetchNyaaRSS, formatItemForDisplay } from "./src/rss.js";
 import { CATEGORY_NAMES } from "./src/types.js";
-import { readFile, writeFile } from "node:fs/promises";
 
 interface Args {
   query?: string;
@@ -11,8 +10,6 @@ interface Args {
   user?: string;
   sort?: string;
   limit?: number;
-  output?: string;
-  from?: string;
   format: "table" | "magnets" | "json";
   indices?: string;
 }
@@ -44,13 +41,6 @@ function parseArgs(): Args {
       case "--limit":
         result.limit = parseInt(args[++i], 10);
         break;
-      case "-o":
-      case "--output":
-        result.output = args[++i];
-        break;
-      case "--from":
-        result.from = args[++i];
-        break;
       case "--format":
         result.format = args[++i] as Args["format"];
         break;
@@ -80,7 +70,6 @@ function parseArgs(): Args {
 
 function printHelp(): void {
   console.log(`Usage: nyaa [options] [query]
-       nyaa --from <file> [options]
 
 Search nyaa.si for anime torrents.
 
@@ -90,8 +79,6 @@ Options:
   -u, --user <username>    Filter by uploader
   -s, --sort <sort>        Sort: seeders_desc, seeders_asc, date_desc, date_asc, size_desc, size_asc
   -l, --limit <n>          Limit results shown (default: 10, max: 50)
-  -o, --output <file>      Save JSON results to file
-  --from <file>            Load from JSON file instead of searching
   --format <format>        Output format: table, magnets, json (default: table)
   --indices <0,1,2|all>    Indices to output with --format magnets
   -L, --list-categories    List all category codes
@@ -100,9 +87,8 @@ Options:
 Examples:
   nyaa "frieren"                              # Search and show table
   nyaa "frieren" -c 1_2 -s seeders_desc       # With category and sort
-  nyaa "frieren" --format magnets --indices 0,1,2   # Get magnets for indices
-  nyaa "frieren" -o results.json              # Save to file
-  nyaa --from results.json --format magnets --indices all  # Load and extract all`);
+  nyaa "frieren" --indices 0,1,2              # Get magnets for indices
+  nyaa "frieren" --format json > results.json # Save to file`);
 }
 
 function printCategories(): void {
@@ -133,24 +119,18 @@ function printCategories(): void {
   console.log("  6_2   Software - Games");
 }
 
-async function loadFromFile(path: string): Promise<any[]> {
-  try {
-    const data = await readFile(path, "utf-8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error(`Error loading ${path}:`, error instanceof Error ? error.message : error);
-    process.exit(1);
-  }
-}
-
 async function main(): Promise<void> {
   const args = parseArgs();
 
   // Validate args
-  if (!args.from && !args.query) {
-    console.error("Error: Query required (or use --from <file>)");
+  if (!args.query) {
+    console.error("Error: Query required");
     printHelp();
     process.exit(1);
+  }
+
+  if (args.indices && args.format === "table") {
+    args.format = "magnets";
   }
 
   if (args.format === "magnets" && !args.indices) {
@@ -158,33 +138,24 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Load or fetch results
+  // Fetch results
   let items: any[];
-  if (args.from) {
-    items = await loadFromFile(args.from);
-  } else {
-    try {
-      items = await fetchNyaaRSS(
-        args.query!,
-        args.category,
-        args.filter,
-        args.user,
-        args.sort as any
-      );
-    } catch (error) {
-      console.error("Error:", error instanceof Error ? error.message : error);
-      process.exit(1);
-    }
+  try {
+    items = await fetchNyaaRSS(
+      args.query!,
+      args.category,
+      args.filter,
+      args.user,
+      args.sort as any
+    );
+  } catch (error) {
+    console.error("Error:", error instanceof Error ? error.message : error);
+    process.exit(1);
   }
 
   if (items.length === 0) {
     console.log("No results found.");
     return;
-  }
-
-  // Save to file if requested
-  if (args.output) {
-    await writeFile(args.output, JSON.stringify(items, null, 2));
   }
 
   // Output based on format
