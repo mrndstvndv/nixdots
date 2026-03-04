@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, lib, ... }:
 {
   programs.nushell = {
     enable = true;
@@ -14,8 +14,18 @@
       $env.PROMPT_COMMAND_RIGHT = ""
 
       # Add nix paths to PATH
-      $env.PATH = ($env.PATH | split row (char esep) | prepend "~/.nix-profile/bin")
+      $env.PATH = ($env.PATH | split row (char esep) | prepend "${config.home.homeDirectory}/.nix-profile/bin")
       $env.PATH = ($env.PATH | split row (char esep) | prepend "/run/current-system/sw/bin")
+
+      # Add custom session paths
+      ${lib.concatMapStrings (path: ''
+        $env.PATH = ($env.PATH | split row (char esep) | prepend "${path}")
+      '') config.home.sessionPath}
+
+      # Add home.sessionVariables to nushell
+      ${lib.concatStrings (lib.mapAttrsToList (name: value: ''
+        $env.${name} = "${toString value}"
+      '') config.home.sessionVariables)}
     '';
   };
 

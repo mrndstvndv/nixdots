@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, lib, ... }:
 
 {
   # Create the WebDAV start script
@@ -81,7 +81,12 @@
     alias l='ls -lahG'
     
     # Use Home Manager installed binaries
-    export PATH="$HOME/.local/bin:$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH"
+    export PATH="$HOME/.local/bin:$HOME/.nix-profile/bin:/run/current-system/sw/bin${lib.concatMapStrings (path: ":${path}") config.home.sessionPath}:$PATH"
+    
+    # Use Home Manager session variables
+    ${lib.concatStrings (lib.mapAttrsToList (name: value: ''
+    export ${name}="${toString value}"
+    '') config.home.sessionVariables)}
     
     # Auto-start tmux for SSH connections
     if [[ -z "$TMUX" && -n "$SSH_CONNECTION" ]]; then

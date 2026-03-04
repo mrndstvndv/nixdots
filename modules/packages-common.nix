@@ -1,7 +1,10 @@
 { config, pkgs, amp, codex, ... }:
 {
+  imports = [ ./bun.nix ];
+
+  custom.bun.enable = true;
+
   home.packages = [
-    pkgs.bun
     pkgs.lazygit
     pkgs.gh
     pkgs.git
@@ -31,7 +34,6 @@
 
   # Common PATH additions
   home.sessionPath = [
-    "${config.home.homeDirectory}/.bun/bin"
     "${config.home.homeDirectory}/.config/nixdots/bin"
   ];
 }

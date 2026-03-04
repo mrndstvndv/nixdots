@@ -17,19 +17,14 @@
     SHELL = "${pkgs.nushell}/bin/nu";
   };
 
-  # Darwin-specific nushell config
+  # Darwin-specific bun and nushell config
+  custom.bun.installDir = "/Volumes/realme/.bun";
+
   programs.nushell = {
     environmentVariables = {
       UV_CACHE_DIR = "/Volumes/realme/.cache/uv";
       GRADLE_USER_HOME = "/Volumes/realme/.gradle";
-      BUN_INSTALL = "/Volumes/realme/.bun";
     };
-    extraConfig = ''
-      # Add bun to PATH if external storage is available
-      if ($env.BUN_INSTALL? | is-not-empty) {
-        $env.PATH = ($env.PATH | split row (char esep) | prepend ($"($env.BUN_INSTALL)/bin"))
-      }
-    '';
   };
 
   # Nix environment for login shells and POSIX compatibility

@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, lib, ... }:
 {
   programs.fish = {
     enable = true;
@@ -7,6 +7,7 @@
         if test -z "$__NIX_DARWIN_SET_ENVIRONMENT_DONE"
           fish_add_path --prepend /run/current-system/sw/bin
           fish_add_path --prepend $HOME/.nix-profile/bin
+          ${lib.concatMapStrings (path: "fish_add_path --prepend ${path}\n") config.home.sessionPath}
         end
 
         fish_vi_key_bindings
