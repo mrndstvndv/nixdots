@@ -19,11 +19,11 @@ function parseNyaaNamespace(str: string): string {
 
 function parseSizeToBytes(sizeStr: string): number {
   const units: Record<string, number> = {
-    "B": 1,
-    "KiB": 1024,
-    "MiB": 1024 * 1024,
-    "GiB": 1024 * 1024 * 1024,
-    "TiB": 1024 * 1024 * 1024 * 1024,
+    B: 1,
+    KiB: 1024,
+    MiB: 1024 * 1024,
+    GiB: 1024 * 1024 * 1024,
+    TiB: 1024 * 1024 * 1024 * 1024,
   };
 
   const match = sizeStr.match(/([\d.]+)\s*(B|KiB|MiB|GiB|TiB)/);
@@ -75,7 +75,7 @@ function parseRSS(xml: string): NyaaItem[] {
 
     let tagMatch;
     while ((tagMatch = tagRegex.exec(itemXml)) !== null) {
-      const key = parseNyaaNamespace(tagMatch[1]!);
+      const key = parseNyaaNamespace(tagMatch[1]);
       const value = tagMatch[2] ?? "";
       (parsed as Record<string, string>)[key] = value;
     }
@@ -107,8 +107,7 @@ export async function fetchNyaaRSS(
   category?: string,
   filter?: string,
   user?: string,
-  sort?: SortOption,
-  signal?: AbortSignal
+  sort?: SortOption
 ): Promise<NyaaItem[]> {
   const params = new URLSearchParams();
   params.set("page", "rss");
@@ -120,10 +119,7 @@ export async function fetchNyaaRSS(
   const url = `https://nyaa.si/?${params.toString()}`;
 
   const response = await fetch(url, {
-    signal,
-    headers: {
-      Accept: "application/rss+xml",
-    },
+    headers: { Accept: "application/rss+xml" },
   });
 
   if (!response.ok) {
@@ -133,13 +129,13 @@ export async function fetchNyaaRSS(
   const xml = await response.text();
   const items = parseRSS(xml);
 
-  // Default to seeders_desc if no sort specified
   const sortToApply = sort ?? "seeders_desc";
   return sortItems(items, sortToApply);
 }
 
-export function formatItemForDisplay(item: NyaaItem): string {
+export function formatItemForDisplay(item: NyaaItem, index?: number): string {
   const seeders = item.seeders > 0 ? `+${item.seeders}` : "0";
   const leechers = item.leechers > 0 ? `-${item.leechers}` : "0";
-  return `[${item.category}] ${item.title} (${item.size}) [${seeders}/${leechers}]`;
+  const idx = index !== undefined ? `${index}. `.padStart(4) : "";
+  return `${idx}${item.title} (${item.size}) [${seeders}/${leechers}]`;
 }
