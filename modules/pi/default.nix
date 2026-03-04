@@ -30,6 +30,9 @@ in
   # Skills - symlink entire directory
   home.file.".pi/agent/skills".source = ./skills;
 
+  # Prompt templates - symlink to ~/.pi/agent/prompts/
+  home.file.".pi/agent/prompts".source = ./prompt-templates;
+
   # Pure, generated settings.json - no symlinks, no mutable state
   home.file.".pi/agent/settings.json".text = builtins.toJSON piSettingsFinal;
 }

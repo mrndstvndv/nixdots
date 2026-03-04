@@ -17,6 +17,8 @@ modules/pi/
 │   └── extensions/      # Local extension TypeScript files
 ├── agents/              # Subagent definitions
 │   └── scout.md         # Example: GitHub Copilot scout agent
+├── prompt-templates/    # Reusable prompt templates
+│   └── analyze.md       # Example: llm-tldr analysis template
 ├── settings.json        # Base pi settings
 └── AGENTS.md            # Global AGENTS.md context
 ```
