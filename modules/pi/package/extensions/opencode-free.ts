@@ -1,13 +1,16 @@
 /**
- * OpenCode Zen — Free MiniMax M2.5 Access
+ * OpenCode Zen — Free Model Access
  *
  * Registers the OpenCode Zen provider with free models.
  * Uses public anonymous access when OPENCODE_API_KEY is not set (free models only).
  * Set OPENCODE_API_KEY to unlock paid models on the same endpoint.
  *
- * Free models available:
- *   - minimax-m2.5-free (MiniMax M2.5 Free)
- *   - trinity-large-preview-free (Trinity Large Preview Free)
+ * Free models available (verified via API):
+ *   - minimax-m2.5-free (MiniMax M2.5 Free) - 204.8K context, 16K output
+ *   - trinity-large-preview-free (Trinity Large Preview Free) - 128K context, 8K output
+ *
+ * Note: OpenCode's models-api.json lists additional "-free" models, but only
+ * these two are accessible via the public API without authentication.
  *
  * Usage: /model → opencode/minimax-m2.5-free
  */
