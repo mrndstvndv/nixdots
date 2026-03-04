@@ -230,10 +230,6 @@ async function main(): Promise<void> {
       if (items.length > limit) {
         console.log(`\n... and ${items.length - limit} more`);
       }
-
-      if (!args.from) {
-        console.log("\nUse '--format magnets --indices 0,1,2' to extract magnet links");
-      }
       break;
   }
 }
