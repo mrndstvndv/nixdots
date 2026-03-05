@@ -5,19 +5,19 @@ description: Search nyaa.si for anime torrents and extract magnet links. Use whe
 
 # Nyaa Skill
 
-Search nyaa.si for anime.
+**Run via:** `~/.pi/agent/skills/nyaa/nyaa`
 
 ## Usage
 
 ```bash
 # Search (default: English-translated, seeders_desc)
-./nyaa "frieren"
+nyaa "frieren"
 
 # Extract magnets (comma-separated or 'all')
-./nyaa "frieren" --indices 0,1,2
+nyaa "frieren" --indices 0,1,2
 
-# Save results to JSON
-./nyaa "frieren" --format json > results.json
+# Save results to file
+nyaa "query" --indices 0,1,2 > magnets.txt
 ```
 
 **Options:**
@@ -37,5 +37,3 @@ Search nyaa.si for anime.
 | 0_0  | All |
 
 **Tip:** Default sort is `seeders_desc` (best for healthy torrents). Use `-L` for full code list.
-
-Save magnets: `./nyaa "query" --indices <all|0,1,2> > file.txt`
