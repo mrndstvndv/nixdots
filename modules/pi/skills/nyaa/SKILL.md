@@ -37,3 +37,5 @@ Search nyaa.si for anime.
 | 0_0  | All |
 
 **Tip:** Default sort is `seeders_desc` (best for healthy torrents). Use `-L` for full code list.
+
+Save magnets: `./nyaa "query" --indices <all|0,1,2> > file.txt`
