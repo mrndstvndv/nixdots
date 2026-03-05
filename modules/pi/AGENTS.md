@@ -47,24 +47,6 @@ function process(user: User | null) {
 - Web Search: `ddgr --json "query"`
 - After running ddgr, you may use `web_fetch` to retrieve the full content of any search result URL if you need more details
 
-## Pi Config
-
-All pi configuration (skills, extensions, prompts, settings) is managed via nix in `~/.config/nixdots/modules/pi/`. If you need to modify pi config, do it there, not in the default pi install locations.
-
-```
-~/.config/nixdots/modules/pi/
-├── AGENTS.md          # This file
-├── default.nix         # Nix module config
-├── settings.json      # Pi settings
-├── skills/             # Custom skills
-│   └── nyaa/
-│       ├── SKILL.md
-│       ├── scripts/nyaa
-│       └── ...
-├── extensions/        # Custom extensions
-└── prompt-templates/  # Custom prompt templates
-```
-
 ## Tool Preferences
 - Use `uv` instead of `python` (e.g., `uv run script.py`)
 - Use `bun` instead of `node` or `npm`
