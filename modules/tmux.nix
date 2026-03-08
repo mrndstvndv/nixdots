@@ -17,6 +17,7 @@ in
     enable = true;
     extraConfig = ''
       set -sg escape-time 5
+      set -g extended-keys on
 
       bind -n M-k select-pane -U
       bind -n M-j select-pane -D
