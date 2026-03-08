@@ -5,7 +5,7 @@ description: Search nyaa.si for anime torrents and extract magnet links. Use whe
 
 # Nyaa Skill
 
-**Run via:** `~/.pi/agent/skills/nyaa/nyaa`
+**Run via:** `./scripts/nyaa`
 
 ## Usage
 

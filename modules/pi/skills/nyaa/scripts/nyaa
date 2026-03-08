@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { fetchNyaaRSS, formatItemForDisplay } from "./src/rss.js";
-import { CATEGORY_NAMES } from "./src/types.js";
+import { fetchNyaaRSS, formatItemForDisplay } from "../src/rss.js";
+import { CATEGORY_NAMES } from "../src/types.js";
 
 interface Args {
   query?: string;
