@@ -1,68 +1,6 @@
 { pkgs, config, lib, ... }:
 
 {
-  # Create the WebDAV start script
-  home.file.".local/bin/start-webdav-tmux" = {
-    text = ''
-      #!/usr/bin/env bash
-      # Start WebDAV server in a detached tmux SESSION named 'webdav'
-      # This runs on the SAME tmux server as your main session, just isolated.
-
-      SESSION_NAME="webdav"
-      PORT="6969"
-      USER="steven"
-      HTPASSWD_FILE="$HOME/.config/rclone/htpasswd"
-      CACHE_DIR="$HOME/.cache/rclone/vfs"
-
-      COMPOSITE_ROOT="/Volumes/webdav"
-
-      # Ensure base directories exist
-      mkdir -p "$HOME/.config/rclone" "$CACHE_DIR" "$COMPOSITE_ROOT"
-
-      mounted_count=0
-      for target in "/Volumes/realme" "/Volumes/portable"; do
-          link="$COMPOSITE_ROOT/$(basename "$target")"
-          if [ -d "$target" ]; then
-              rm -f "$link"
-              ln -s "$target" "$link"
-              mounted_count=$((mounted_count + 1))
-          else
-              [ -L "$link" ] && rm "$link"
-          fi
-      done
-
-      if [ "$mounted_count" -eq 0 ]; then
-          echo "Warning: no target volume mounted for WebDAV."
-          echo "Please mount /Volumes/realme or /Volumes/portable."
-          exit 1
-      fi
-
-      if [ ! -d "$COMPOSITE_ROOT" ]; then
-          echo "Failed to prepare WebDAV root at $COMPOSITE_ROOT."
-          exit 1
-      fi
-
-      # Check if htpasswd file exists, if not, create it
-      if [ ! -f "$HTPASSWD_FILE" ]; then
-          echo "Creating WebDAV password file..."
-          read -s -p "Enter password for WebDAV user '$USER': " PASS
-          echo ""
-          ${pkgs.apacheHttpd}/bin/htpasswd -cb "$HTPASSWD_FILE" "$USER" "$PASS"
-          echo "Password set."
-      fi
-
-      # Check if session already exists
-      if ${pkgs.tmux}/bin/tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
-          exit 0
-      fi
-
-      # Start new session
-      ${pkgs.tmux}/bin/tmux new-session -d -s "$SESSION_NAME" \
-          "${pkgs.rclone}/bin/rclone serve webdav '$COMPOSITE_ROOT' --addr 0.0.0.0:$PORT --htpasswd '$HTPASSWD_FILE' --vfs-cache-mode writes --buffer-size 256M --vfs-read-ahead 128M --cache-dir '$CACHE_DIR' --copy-links; read"
-    '';
-    executable = true;
-  };
-
   # Only manage the ~/.zshrc file
   # We do NOT enable 'programs.zsh' which would install the binary
   home.file.".zshrc".text = ''
@@ -97,9 +35,12 @@
             diskutil mount "realme" >/dev/null 2>&1 || true
         fi
         
-        # Start WebDAV server in detached tmux session if not running
-        if [[ -f "$HOME/.local/bin/start-webdav-tmux" ]]; then
-            "$HOME/.local/bin/start-webdav-tmux" >/dev/null 2>&1 &
+        # Start media server in detached tmux session if not running
+        MEDIA_SERVER_DIR="/Volumes/realme/Dev/media"
+        if [[ -d "$MEDIA_SERVER_DIR" && -x "$MEDIA_SERVER_DIR/server" ]]; then
+            if ! ${pkgs.tmux}/bin/tmux has-session -t "background" 2>/dev/null; then
+                cd "$MEDIA_SERVER_DIR" && ${pkgs.tmux}/bin/tmux new-session -d -s "background" "./server"
+            fi
         fi
 
         if command -v tmux >/dev/null 2>&1; then
