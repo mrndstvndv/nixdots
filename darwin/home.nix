@@ -9,8 +9,6 @@
   home.packages = [
     # pkgs.daisydisk
     pkgs.tailscale
-    pkgs.rclone
-    pkgs.apacheHttpd # for htpasswd
   ];
 
   home.sessionVariables = {
