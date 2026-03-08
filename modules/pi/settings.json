@@ -6,7 +6,7 @@
   "lsp": {
     "hookMode": "edit_write"
   },
-  "defaultProvider": "google-gemini-cli",
-  "defaultModel": "gemini-3-pro-preview",
+  "defaultProvider": "opencode",
+  "defaultModel": "minimax-m2.5-free",
   "hideThinkingBlock": false
 }
