@@ -51,6 +51,7 @@
 
     brews = [
       "smctemp"
+      "jadx"
     ];
   };
 }

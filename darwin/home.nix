@@ -2,7 +2,7 @@
 {
   imports = [
     ../modules/packages-gui.nix
-    ../modules/nushell.nix
+    ../modules/fish.nix
     ./aerospace.nix
   ];
 
@@ -12,18 +12,13 @@
   ];
 
   home.sessionVariables = {
-    SHELL = "${pkgs.nushell}/bin/nu";
+    SHELL = "${pkgs.fish}/bin/fish";
   };
 
-  # Darwin-specific bun and nushell config
+  # Darwin-specific bun and fish config
   custom.bun.installDir = "/Volumes/realme/.bun";
 
-  programs.nushell = {
-    environmentVariables = {
-      UV_CACHE_DIR = "/Volumes/realme/.cache/uv";
-      GRADLE_USER_HOME = "/Volumes/realme/.gradle";
-    };
-  };
+
 
   # Nix environment for login shells and POSIX compatibility
   home.file.".profile".text = ''

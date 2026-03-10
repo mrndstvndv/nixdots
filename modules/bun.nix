@@ -34,7 +34,7 @@ in
       "${cfg.installDir}/bin"
     ];
 
-    # The nushell PATH and environment additions are already handled by modules/nushell.nix
+    # The fish PATH and environment additions are already handled by modules/fish.nix
     # which iterates over config.home.sessionPath and config.home.sessionVariables.
   };
 }
