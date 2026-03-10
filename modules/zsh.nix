@@ -39,7 +39,7 @@
         MEDIA_SERVER_DIR="/Volumes/realme/Dev/media"
         if [[ -d "$MEDIA_SERVER_DIR" && -x "$MEDIA_SERVER_DIR/server" ]]; then
             if ! ${pkgs.tmux}/bin/tmux has-session -t "background" 2>/dev/null; then
-                cd "$MEDIA_SERVER_DIR" && ${pkgs.tmux}/bin/tmux new-session -d -s "background" "./server"
+                (cd "$MEDIA_SERVER_DIR" && ${pkgs.tmux}/bin/tmux new-session -d -s "background" "./server")
             fi
         fi
 
