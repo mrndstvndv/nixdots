@@ -1,12 +1,11 @@
 {
-  "lastChangelogVersion": "0.53.0",
   "packages": [
     "~/.pi/packages/nixdots-extensions"
   ],
   "lsp": {
     "hookMode": "edit_write"
   },
-  "defaultProvider": "opencode",
+  "defaultProvider": "codex",
   "defaultModel": "minimax-m2.5-free",
   "hideThinkingBlock": false
 }

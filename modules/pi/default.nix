@@ -1,4 +1,4 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, piAgent ? null, ... }:
 let
   # Build the pi extensions package with its npm dependencies
   piExtensions = pkgs.buildNpmPackage {
@@ -13,16 +13,36 @@ let
     '';
   };
 
+  piPackageDefault = lib.attrByPath [ "packages" pkgs.system "default" ] null piAgent;
+  piPackageNamed = lib.attrByPath [ "packages" pkgs.system "pi" ] null piAgent;
+  piPackage =
+    if piAgent == null then null
+    else if piPackageDefault != null then piPackageDefault
+    else if piPackageNamed != null then piPackageNamed
+    else throw "piAgent flake must expose packages.${pkgs.system}.default or packages.${pkgs.system}.pi";
+
   # Generate settings.json with the nix store path baked in
   piSettings = builtins.fromJSON (builtins.readFile ./settings.json);
-  piSettingsFinal = piSettings // {
-    # Reference the package directly in the nix store (fully deterministic)
-    packages = [ "${piExtensions}" "../personal" ];
-  };
+
+  piVersion =
+    if piPackage == null then null
+    else if piPackage ? version then piPackage.version
+    else if lib.hasAttrByPath [ "lib" "version" ] piAgent then piAgent.lib.version
+    else throw "piAgent flake must expose a pi package version via packages.${pkgs.system}.*.version or lib.version";
+  piSettingsFinal = piSettings
+    // lib.optionalAttrs (piVersion != null) {
+      lastChangelogVersion = piVersion;
+    }
+    // {
+      # Reference the package directly in the nix store (fully deterministic)
+      packages = [ "${piExtensions}" "../personal" ];
+    };
 in
 {
   home.packages = with pkgs; [
     ddgr
+  ] ++ lib.optionals (piPackage != null) [
+    piPackage
   ];
 
   home.file.".pi/agent/AGENTS.md".source = ./AGENTS.md;

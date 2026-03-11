@@ -40,9 +40,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    piAgent = {
+      url = "github:mrndstvndv/pi-coding-agent-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, my-neovim, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, my-neovim, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
    let
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
@@ -52,7 +57,7 @@
            home = "/Users/steven";
            shell = pkgs.fish;
          };
-         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim amp helium codex; };
+         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim amp helium codex; inherit piAgent; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [
@@ -107,7 +112,7 @@
       modules = [
         # Inject flake input my-neovim into _module.args, so all
         # nix-on-droid modules (including HM) can see it.
-        { _module.args.my-neovim = my-neovim; _module.args.amp = amp; }
+        { _module.args.my-neovim = my-neovim; _module.args.amp = amp; _module.args.piAgent = piAgent; }
         ./nix-on-droid/system.nix
       ];
     };
@@ -115,7 +120,7 @@
     # Standalone Home Manager for Alpine chroot (Termux)
     homeConfigurations."alpine" = home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages.aarch64-linux;
-      extraSpecialArgs = { inherit my-neovim amp codex; };
+      extraSpecialArgs = { inherit my-neovim amp codex piAgent; };
       modules = [
         ./alpine/home.nix
         {

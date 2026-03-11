@@ -6,6 +6,8 @@ This nix module manages the [pi coding agent](https://github.com/badlogic/pi-mon
 
 This module builds a custom pi extensions package with npm dependencies and generates the `settings.json` configuration file. All pi configuration is managed through nix for reproducibility across systems.
 
+If a `piAgent` flake input is provided via `extraSpecialArgs`, the module also installs the `pi` CLI from that flake and generates `lastChangelogVersion` from the packaged pi version.
+
 ## Structure
 
 ```
@@ -39,10 +41,33 @@ The `default.nix` uses `pkgs.buildNpmPackage` to create a deterministic npm pack
 The module generates `~/.pi/agent/settings.json` with:
 - Base settings from `settings.json`
 - `packages` array pointing to the nix store path of the built extensions
+- `lastChangelogVersion` derived from the installed pi package version when `piAgent` is provided
+
+This matters because Home Manager owns `~/.pi/agent/settings.json`, so pi should not be relied on to mutate `lastChangelogVersion` at runtime.
 
 ### 3. Agent Definitions
 
 Subagents are defined in `./agents/*.md` and symlinked to `~/.pi/agent/agents/`.
+
+## External pi flake integration
+
+The module now supports an optional `piAgent` special arg. Expected external flake contract:
+
+```nix
+{
+  packages.${system}.default = ...; # or packages.${system}.pi
+  apps.${system}.default = {
+    type = "app";
+    program = "${self.packages.${system}.default}/bin/pi";
+  };
+}
+```
+
+Recommended:
+- expose a derivation `version` attr
+- optionally expose `lib.version` as a fallback
+
+Once the input exists, pass it through your flake's Home Manager `extraSpecialArgs` as `piAgent`.
 
 ## Adding New Extensions
 
@@ -194,6 +219,7 @@ If no model is specified, the subagent uses the **default model from your main p
 - Always use `npm install` (not bun) for the lockfile - nix expects `package-lock.json`
 - Keep the `npmDepsHash` updated whenever dependencies change
 - The module manages `~/.pi/agent/settings.json` - don't edit it manually
+- `lastChangelogVersion` should be generated from the packaged pi version when `piAgent` is configured, not hardcoded manually
 - Local extensions are referenced relative to the package root: `./extensions/...`
 - NPM packages are referenced: `./node_modules/package-name/path/to/entry.js`
 

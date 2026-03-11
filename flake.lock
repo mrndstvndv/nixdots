@@ -391,6 +391,26 @@
         "type": "gitlab"
       }
     },
+    "piAgent": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1773242729,
+        "narHash": "sha256-6dMdaadNjOLOT/B+USHbzjjRjeIeyIeKyeJqerLicms=",
+        "owner": "mrndstvndv",
+        "repo": "pi-coding-agent-flake",
+        "rev": "9eedf909b0f13678843c6d660080deeadc62a23b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mrndstvndv",
+        "repo": "pi-coding-agent-flake",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "amp": "amp",
@@ -404,7 +424,8 @@
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
         "nix-on-droid": "nix-on-droid",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs_2",
+        "piAgent": "piAgent"
       }
     },
     "scss-reset": {
