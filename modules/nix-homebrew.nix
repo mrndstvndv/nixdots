@@ -52,6 +52,7 @@
     brews = [
       "smctemp"
       "jadx"
+      "agent-browser"
     ];
   };
 }
