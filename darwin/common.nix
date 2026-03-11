@@ -8,7 +8,6 @@
     ../modules/neovim.nix
     ../modules/packages-common.nix
     ../modules/packages-gui.nix
-    ../modules/opencode
     ../modules/pi
   ];
 

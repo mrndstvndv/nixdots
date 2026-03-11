@@ -12,7 +12,6 @@
     pkgs.cursor-cli
     pkgs.ffmpeg
     pkgs.android-tools
-    pkgs.ntfy-sh
     pkgs.htop
     pkgs.jujutsu
     pkgs.nodejs_24

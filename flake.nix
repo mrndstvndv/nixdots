@@ -8,7 +8,6 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
-    opencode.url = "github:mrndstvndv/opencode-flake";
     amp.url = "github:mrndstvndv/amp-flake";
     amp.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
@@ -43,7 +42,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, my-neovim, opencode, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, my-neovim, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid }:
    let
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
@@ -53,7 +52,7 @@
            home = "/Users/steven";
            shell = pkgs.fish;
          };
-         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim opencode amp helium codex; };
+         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim amp helium codex; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [
@@ -116,7 +115,7 @@
     # Standalone Home Manager for Alpine chroot (Termux)
     homeConfigurations."alpine" = home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages.aarch64-linux;
-      extraSpecialArgs = { inherit my-neovim opencode amp codex; };
+      extraSpecialArgs = { inherit my-neovim amp codex; };
       modules = [
         ./alpine/home.nix
         {
