@@ -17,7 +17,7 @@ let
   piSettings = builtins.fromJSON (builtins.readFile ./settings.json);
   piSettingsFinal = piSettings // {
     # Reference the package directly in the nix store (fully deterministic)
-    packages = [ "${piExtensions}" ];
+    packages = [ "${piExtensions}" "../personal" ];
   };
 in
 {
