@@ -9,7 +9,7 @@ in
 {
   options.custom.tmux.statusPosition = lib.mkOption {
     type = lib.types.str;
-    default = "top";
+    default = "bottom";
     description = "Position of the tmux status bar (top or bottom)";
   };
 

@@ -15,8 +15,6 @@
 
   custom.bun.installPackage = false;
 
-  custom.tmux.statusPosition = "bottom";
-
   home.packages = [
     pkgs.tzdata
   ];
