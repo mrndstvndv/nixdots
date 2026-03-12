@@ -6,11 +6,13 @@
  * Set OPENCODE_API_KEY to unlock paid models on the same endpoint.
  *
  * Free models available (verified via API):
- *   - minimax-m2.5-free (MiniMax M2.5 Free) - 204.8K context, 16K output
- *   - trinity-large-preview-free (Trinity Large Preview Free) - 128K context, 8K output
+ *   - minimax-m2.5-free (MiniMax M2.5 Free) - 204.8K context, 131K output, reasoning
+ *   - trinity-large-preview-free (Trinity Large Preview Free) - 128K context, 131K output
+ *   - nemotron-3-super-free (Nemotron 3 Super Free) - 1M context, 128K output, reasoning
+ *   - mimo-v2-flash-free (Mimo V2 Flash Free) - 262K context, 65K output, reasoning
  *
  * Note: OpenCode's models-api.json lists additional "-free" models, but only
- * these two are accessible via the public API without authentication.
+ * these four are accessible via the public API without authentication.
  *
  * Usage: /model → opencode/minimax-m2.5-free
  */
@@ -122,11 +124,11 @@ export default function (pi: ExtensionAPI) {
       {
         id: "minimax-m2.5-free",
         name: "MiniMax M2.5 Free",
-        reasoning: false,
+        reasoning: true,
         input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 204800,
-        maxTokens: 16384,
+        maxTokens: 131072,
         compat: {
           supportsDeveloperRole: false,
           maxTokensField: "max_tokens",
@@ -138,8 +140,34 @@ export default function (pi: ExtensionAPI) {
         reasoning: false,
         input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        contextWindow: 128000,
-        maxTokens: 8192,
+        contextWindow: 131072,
+        maxTokens: 131072,
+        compat: {
+          supportsDeveloperRole: false,
+          maxTokensField: "max_tokens",
+        },
+      },
+      {
+        id: "nemotron-3-super-free",
+        name: "Nemotron 3 Super Free",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 1000000,
+        maxTokens: 128000,
+        compat: {
+          supportsDeveloperRole: false,
+          maxTokensField: "max_tokens",
+        },
+      },
+      {
+        id: "mimo-v2-flash-free",
+        name: "Mimo V2 Flash Free",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 262144,
+        maxTokens: 65536,
         compat: {
           supportsDeveloperRole: false,
           maxTokensField: "max_tokens",
