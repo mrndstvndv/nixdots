@@ -6,6 +6,15 @@
     settings = {
       start-at-login = true;
 
+      # Ghostty workaround: prevent tabs from being tiled as separate windows
+      # https://ghostty.org/docs/help/macos-tiling-wms
+      on-window-detected = [
+        {
+          "if".app-id = "com.mitchellh.ghostty";
+          run = [ "layout tiling" ];
+        }
+      ];
+
       mode.main.binding = {
         alt-enter = ''exec-and-forget open -a "/Users/steven/Applications/Home Manager Apps/Ghostty.app"'';
 
