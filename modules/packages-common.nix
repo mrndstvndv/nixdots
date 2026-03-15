@@ -9,6 +9,8 @@
     pkgs.gh
     pkgs.git
     pkgs.uv
+    pkgs.fzf
+    pkgs.zoxide
     pkgs.cursor-cli
     pkgs.ffmpeg
     pkgs.android-tools
