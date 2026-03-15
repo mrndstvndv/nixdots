@@ -47,12 +47,14 @@
       "proton-pass"
       "protonvpn"
       "mpv"
+      "codex-app"
     ];
 
     brews = [
       "smctemp"
       "jadx"
       "agent-browser"
+      # "kotlin-lsp"
     ];
   };
 }

@@ -119,7 +119,7 @@
 
     # Standalone Home Manager for Alpine chroot (Termux)
     homeConfigurations."alpine" = home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs.legacyPackages.aarch64-linux;
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
       extraSpecialArgs = { inherit my-neovim amp codex piAgent; };
       modules = [
         ./alpine/home.nix
