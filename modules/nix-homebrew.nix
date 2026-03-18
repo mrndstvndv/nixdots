@@ -48,6 +48,7 @@
       "protonvpn"
       "mpv"
       "codex-app"
+      "obs"
     ];
 
     brews = [

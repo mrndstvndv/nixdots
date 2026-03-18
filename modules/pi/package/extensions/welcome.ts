@@ -208,7 +208,7 @@ function getContextInfo() {
       { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/extensions/kimi/kimi.ts" },
       { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/extensions/lsp/lsp-tool.ts" },
       { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/extensions/lsp/lsp.ts" },
-      { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/extensions/tmux-notify.ts" },
+      { scope: "user" as const, path: "/nix/store/jayscj29apwb7b0syl7hwn2b43ki2k30-nixdots-pi-extensions-1.0.0/extensions/pi-notify.ts" },
       { scope: "user" as const, path: joinHome(".pi/agent/extensions/welcome.ts") }
     ]
   };

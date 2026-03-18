@@ -38,6 +38,7 @@ let
       packages = [ "${piExtensions}" "../personal" ];
       theme = "no-thinking-bg";
       themes = [ "~/.pi/agent/themes" ];
+      hideThinkingBlock = true;
     };
 in
 {

@@ -12,7 +12,7 @@
       "./extensions/lsp/lsp.ts",
       "./extensions/lsp/lsp-tool.ts",
       "./extensions/kimi/kimi.ts",
-      "./extensions/tmux-notify.ts",
+      "./extensions/pi-notify.ts",
       "./extensions/file-command.ts",
       "./extensions/handoff.ts",
       "./extensions/web-fetch.ts",
