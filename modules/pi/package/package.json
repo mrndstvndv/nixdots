@@ -20,7 +20,8 @@
       "./extensions/web-fetch.ts",
       "./extensions/web-search.ts",
       "./extensions/opencode-free.ts",
-      "./extensions/kilocode-free.ts"
+      "./extensions/kilocode-free.ts",
+      "./extensions/pi-rewind/index.ts"
     ]
   }
 }
