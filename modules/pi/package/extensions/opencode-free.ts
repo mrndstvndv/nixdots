@@ -9,10 +9,12 @@
  *   - minimax-m2.5-free (MiniMax M2.5 Free) - 204.8K context, 131K output, reasoning
  *   - trinity-large-preview-free (Trinity Large Preview Free) - 128K context, 131K output
  *   - nemotron-3-super-free (Nemotron 3 Super Free) - 1M context, 128K output, reasoning
- *   - mimo-v2-flash-free (Mimo V2 Flash Free) - 262K context, 65K output, reasoning
+ *   - mimo-v2-flash-free (MiMo V2 Flash Free) - 262K context, 65K output, reasoning
+ *   - mimo-v2-pro-free (MiMo V2 Pro Free) - 1M context, 64K output, reasoning
+ *   - mimo-v2-omni-free (MiMo V2 Omni Free) - 262K context, 64K output, reasoning
  *
  * Note: OpenCode's models-api.json lists additional "-free" models, but only
- * these four are accessible via the public API without authentication.
+ * these six are accessible via the public API without authentication.
  *
  * Usage: /model → opencode/minimax-m2.5-free
  */
@@ -162,12 +164,38 @@ export default function (pi: ExtensionAPI) {
       },
       {
         id: "mimo-v2-flash-free",
-        name: "Mimo V2 Flash Free",
+        name: "MiMo V2 Flash Free",
         reasoning: true,
         input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 262144,
         maxTokens: 65536,
+        compat: {
+          supportsDeveloperRole: false,
+          maxTokensField: "max_tokens",
+        },
+      },
+      {
+        id: "mimo-v2-pro-free",
+        name: "MiMo V2 Pro Free",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 1048576,
+        maxTokens: 64000,
+        compat: {
+          supportsDeveloperRole: false,
+          maxTokensField: "max_tokens",
+        },
+      },
+      {
+        id: "mimo-v2-omni-free",
+        name: "MiMo V2 Omni Free",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 262144,
+        maxTokens: 64000,
         compat: {
           supportsDeveloperRole: false,
           maxTokensField: "max_tokens",
