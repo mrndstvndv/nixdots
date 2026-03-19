@@ -5,7 +5,7 @@ let
     pname = "nixdots-pi-extensions";
     version = "1.0.0";
     src = ./package;
-    npmDepsHash = "sha256-fm99F+/XWFDWTRmE1ZkdKbPL9gW7DNbgRSgkGBifzeI=";
+    npmDepsHash = "sha256-qImFkBXfEHragSn7Ayv+GCkRcdBkL1NYoYjozhKCueo=";
     buildPhase = "true";
     installPhase = ''
       mkdir -p $out
