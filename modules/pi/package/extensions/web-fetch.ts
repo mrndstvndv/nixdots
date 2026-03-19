@@ -186,6 +186,3 @@ async function readResponseText(response: Response): Promise<string> {
     return ""
   }
 }
-turn ""
-  }
-}
