@@ -1,0 +1,1234 @@
+#!/usr/bin/env bun
+// @ts-check
+
+import { readdir, realpath, stat } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+/** @typedef {{ inputPath: string; host: string; port: number }} CliOptions */
+/** @typedef {{ mode: "directory"; rootPath: string; servedPath: string }} DirectoryConfig */
+/** @typedef {{ mode: "file"; rootPath: string; servedPath: string; filePath: string; relativePath: string }} FileConfig */
+/** @typedef {DirectoryConfig | FileConfig} AppConfig */
+/** @typedef {{ absolutePath: string; relativePath: string; modifiedAt: Date }} MarkdownFile */
+/** @typedef {{ kind: "ok"; filePath: string; relativePath: string } | { kind: "invalid" } | { kind: "missing" } | { kind: "unsupported" }} ResolveResult */
+
+const DEFAULT_HOST = "0.0.0.0";
+const DEFAULT_PORT = 3000;
+const ALLOWED_EXTENSIONS = new Set([".md", ".markdown"]);
+const MARKDOWN_OPTIONS = {
+  tables: true,
+  strikethrough: true,
+  tasklists: true,
+  autolinks: true,
+  headings: { ids: true },
+  tagFilter: true,
+};
+
+const STYLES = `
+:root {
+  color-scheme: light dark;
+  --page-bg: #f4f7fb;
+  --surface-bg: #ffffff;
+  --text-primary: #172033;
+  --text-muted: #5b667d;
+  --border: #d8e0ee;
+  --link: #0f62fe;
+  --visited-link: #6f42c1;
+  --inline-code-bg: #eef2f8;
+  --code-block-bg: #0f172a;
+  --code-block-text: #e5eefc;
+  --quote-border: #8aa4ff;
+  --quote-bg: #eef3ff;
+  --table-surface: #ffffff;
+  --table-stripe: #f7f9fd;
+  --accent: #3b82f6;
+  --shadow: 0 10px 35px rgba(15, 23, 42, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page-bg: #0b1020;
+    --surface-bg: #121a2d;
+    --text-primary: #edf2ff;
+    --text-muted: #a6b2cb;
+    --border: #27324b;
+    --link: #8ab4ff;
+    --visited-link: #c9a4ff;
+    --inline-code-bg: #1d2740;
+    --code-block-bg: #09111f;
+    --code-block-text: #e8f0ff;
+    --quote-border: #5e8fff;
+    --quote-bg: #111b34;
+    --table-surface: #121a2d;
+    --table-stripe: #0f1628;
+    --accent: #8ab4ff;
+    --shadow: 0 10px 35px rgba(0, 0, 0, 0.28);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--page-bg);
+  color: var(--text-primary);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font: 16px/1.7 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+a {
+  color: var(--link);
+}
+
+a:visited {
+  color: var(--visited-link);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.page {
+  min-height: 100vh;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--page-bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.shell,
+.nav-row {
+  width: min(100%, 58rem);
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.nav-row {
+  min-height: 3.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+.nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.brand,
+.pill,
+.file-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-bg);
+  color: var(--text-primary);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.pill.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.shell {
+  padding-top: 1rem;
+  padding-bottom: 2rem;
+}
+
+.page-header {
+  margin: 0 0 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+  line-height: 1.15;
+}
+
+.meta {
+  margin: 0.65rem 0 0;
+  color: var(--text-muted);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  word-break: break-word;
+}
+
+.surface {
+  background: var(--surface-bg);
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  box-shadow: var(--shadow);
+}
+
+.surface-body {
+  padding: 1rem;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.file-row {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.file-card {
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface-bg);
+  color: inherit;
+  text-decoration: none;
+}
+
+.file-card:hover,
+.file-card:focus-visible,
+.file-action:hover,
+.file-action:focus-visible,
+.pill:hover,
+.pill:focus-visible,
+.brand:hover,
+.brand:focus-visible {
+  border-color: var(--accent);
+}
+
+.file-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.file-path {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.file-time {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.file-actions-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.markdown-body,
+.raw-body,
+.empty-state,
+.error-body {
+  padding: 1rem;
+}
+
+.markdown-body > :first-child,
+.raw-body > :first-child,
+.empty-state > :first-child,
+.error-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child,
+.raw-body > :last-child,
+.empty-state > :last-child,
+.error-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body :is(h1, h2, h3, h4, h5, h6) {
+  line-height: 1.2;
+  margin-top: 1.7em;
+  margin-bottom: 0.6em;
+  scroll-margin-top: 5rem;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body pre,
+.markdown-body table,
+.markdown-body hr {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.35rem;
+}
+
+.markdown-body li + li {
+  margin-top: 0.35rem;
+}
+
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  background: var(--inline-code-bg);
+  border-radius: 0.45rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.95em;
+}
+
+.markdown-body pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--code-block-bg);
+  color: var(--code-block-text);
+}
+
+.markdown-body pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.95rem;
+}
+
+.markdown-body blockquote {
+  padding: 0.3rem 1rem;
+  border-left: 4px solid var(--quote-border);
+  background: var(--quote-bg);
+  border-radius: 0.75rem;
+}
+
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.markdown-body table {
+  display: block;
+  overflow-x: auto;
+  width: max-content;
+  max-width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  background: var(--table-surface);
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-body tbody tr:nth-child(even) {
+  background: var(--table-stripe);
+}
+
+.markdown-body img {
+  border-radius: 0.9rem;
+}
+
+.raw-block {
+  margin: 0;
+  overflow-x: auto;
+  white-space: pre;
+  font: 0.95rem/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--code-block-bg);
+  color: var(--code-block-text);
+}
+
+.empty-state,
+.error-body {
+  color: var(--text-primary);
+}
+
+.empty-state p,
+.error-body p {
+  margin: 0.75rem 0 0;
+}
+
+@media (min-width: 768px) {
+  body {
+    font-size: 17px;
+  }
+
+  .shell,
+  .nav-row {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .shell {
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+  }
+
+  .surface-body,
+  .markdown-body,
+  .raw-body,
+  .empty-state,
+  .error-body {
+    padding: 1.35rem 1.5rem;
+  }
+
+  .file-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
+
+  .file-actions-row {
+    align-items: stretch;
+  }
+
+  .file-action {
+    min-width: 5.25rem;
+    height: 100%;
+  }
+}
+`;
+
+const HELP_TEXT = `mdview <path> [--host 0.0.0.0] [--port 3000]
+
+Serve one Markdown file or a directory of Markdown files as mobile-friendly HTML.
+
+Flags:
+  --host <host>   Bind host. Default: 0.0.0.0
+  --port <port>   Bind port. Default: 3000
+  --help          Show this help
+`;
+
+main().catch(handleFatalError);
+
+async function main() {
+  const options = parseCliArgs(process.argv.slice(2));
+  const appConfig = await resolveAppConfig(options.inputPath);
+  const server = startServer(appConfig, options);
+
+  printStartupInfo(appConfig, options);
+  registerShutdown(server);
+}
+
+/**
+ * @param {string[]} args
+ * @returns {CliOptions}
+ */
+function parseCliArgs(args) {
+  if (args.length === 0) fail("Missing path.\n\n" + HELP_TEXT);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(HELP_TEXT);
+    process.exit(0);
+  }
+
+  let inputPath = "";
+  let host = DEFAULT_HOST;
+  let port = DEFAULT_PORT;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === "--host") {
+      const value = args[index + 1];
+      if (!value) fail("Missing value for --host");
+      host = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--host=")) {
+      host = arg.slice("--host=".length);
+      continue;
+    }
+
+    if (arg === "--port") {
+      const value = args[index + 1];
+      if (!value) fail("Missing value for --port");
+      port = parsePort(value);
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--port=")) {
+      port = parsePort(arg.slice("--port=".length));
+      continue;
+    }
+
+    if (arg.startsWith("-")) fail(`Invalid flag: ${arg}`);
+    if (inputPath) fail(`Unexpected extra argument: ${arg}`);
+
+    inputPath = arg;
+  }
+
+  if (!inputPath) fail("Missing path.");
+  if (!host.trim()) fail("Host must not be empty");
+
+  return {
+    inputPath,
+    host,
+    port,
+  };
+}
+
+/**
+ * @param {string} value
+ * @returns {number}
+ */
+function parsePort(value) {
+  if (!/^\d+$/.test(value)) fail(`Invalid port: ${value}`);
+
+  const port = Number.parseInt(value, 10);
+  if (port < 1 || port > 65535) fail(`Port out of range: ${value}`);
+
+  return port;
+}
+
+/**
+ * @param {string} inputPath
+ * @returns {Promise<AppConfig>}
+ */
+async function resolveAppConfig(inputPath) {
+  const absoluteInputPath = path.resolve(process.cwd(), inputPath);
+  const inputStat = await getStat(absoluteInputPath);
+
+  if (!inputStat) fail(`Path does not exist: ${absoluteInputPath}`);
+
+  if (inputStat.isDirectory()) {
+    const rootPath = await realpath(absoluteInputPath);
+    return {
+      mode: "directory",
+      rootPath,
+      servedPath: rootPath,
+    };
+  }
+
+  if (!inputStat.isFile()) fail(`Unsupported path type: ${absoluteInputPath}`);
+  if (!isMarkdownFile(absoluteInputPath)) fail(`Unsupported file type: ${absoluteInputPath}`);
+
+  const filePath = await realpath(absoluteInputPath);
+  return {
+    mode: "file",
+    rootPath: path.dirname(filePath),
+    servedPath: filePath,
+    filePath,
+    relativePath: path.basename(filePath),
+  };
+}
+
+/**
+ * @param {AppConfig} appConfig
+ * @param {CliOptions} options
+ */
+function startServer(appConfig, options) {
+  try {
+    return Bun.serve({
+      hostname: options.host,
+      port: options.port,
+      fetch: (request) => handleRequest(request, appConfig),
+      error: (error) => {
+        console.error(error);
+        return htmlResponse(renderErrorPage({
+          title: "Internal render error",
+          message: "mdview hit an unexpected server error.",
+          status: 500,
+          backHref: "/",
+        }), 500, "GET");
+      },
+    });
+  } catch (error) {
+    if (isBusyPortError(error)) fail(`Port ${options.port} is already in use`);
+    throw error;
+  }
+}
+
+/**
+ * @param {Request} request
+ * @param {AppConfig} appConfig
+ * @returns {Promise<Response>}
+ */
+async function handleRequest(request, appConfig) {
+  const method = request.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
+    return htmlResponse(renderErrorPage({
+      title: "Method not allowed",
+      message: "mdview only supports GET and HEAD requests.",
+      status: 405,
+      backHref: "/",
+    }), 405, method);
+  }
+
+  try {
+    if (appConfig.mode === "directory") {
+      return await handleDirectoryRequest(request, appConfig);
+    }
+
+    return await handleFileRequest(request, appConfig);
+  } catch (error) {
+    console.error(error);
+    return htmlResponse(renderErrorPage({
+      title: "Internal render error",
+      message: "mdview could not render that page.",
+      status: 500,
+      backHref: "/",
+    }), 500, method);
+  }
+}
+
+/**
+ * @param {Request} request
+ * @param {DirectoryConfig} appConfig
+ * @returns {Promise<Response>}
+ */
+async function handleDirectoryRequest(request, appConfig) {
+  const method = request.method.toUpperCase();
+  const pathname = new URL(request.url).pathname;
+
+  if (pathname === "/") {
+    const files = await listMarkdownFiles(appConfig.rootPath);
+    return htmlResponse(renderIndexPage(appConfig.rootPath, files), 200, method);
+  }
+
+  if (pathname === "/view" || pathname === "/view/" || pathname === "/raw" || pathname === "/raw/") {
+    return htmlResponse(renderErrorPage({
+      title: "Invalid path",
+      message: "That route needs a Markdown file path.",
+      status: 400,
+      backHref: "/",
+    }), 400, method);
+  }
+
+  if (pathname.startsWith("/view/")) {
+    return await renderDirectoryFileRoute({
+      method,
+      rootPath: appConfig.rootPath,
+      routePath: pathname.slice("/view/".length),
+      activeView: "rendered",
+    });
+  }
+
+  if (pathname.startsWith("/raw/")) {
+    return await renderDirectoryFileRoute({
+      method,
+      rootPath: appConfig.rootPath,
+      routePath: pathname.slice("/raw/".length),
+      activeView: "raw",
+    });
+  }
+
+  return htmlResponse(renderErrorPage({
+    title: "Not found",
+    message: "That page does not exist under this mdview root.",
+    status: 404,
+    backHref: "/",
+  }), 404, method);
+}
+
+/**
+ * @param {Request} request
+ * @param {FileConfig} appConfig
+ * @returns {Promise<Response>}
+ */
+async function handleFileRequest(request, appConfig) {
+  const method = request.method.toUpperCase();
+  const pathname = new URL(request.url).pathname;
+
+  if (pathname === "/" || pathname === "") {
+    return await renderFilePageResponse({
+      method,
+      filePath: appConfig.filePath,
+      relativePath: appConfig.relativePath,
+      renderedHref: "/",
+      rawHref: "/raw",
+      backHref: "/",
+      activeView: "rendered",
+    });
+  }
+
+  if (pathname === "/raw" || pathname === "/raw/") {
+    return await renderFilePageResponse({
+      method,
+      filePath: appConfig.filePath,
+      relativePath: appConfig.relativePath,
+      renderedHref: "/",
+      rawHref: "/raw",
+      backHref: "/",
+      activeView: "raw",
+    });
+  }
+
+  return htmlResponse(renderErrorPage({
+    title: "Not found",
+    message: "File mode only serves / and /raw.",
+    status: 404,
+    backHref: "/",
+  }), 404, method);
+}
+
+/**
+ * @param {{ method: string; rootPath: string; routePath: string; activeView: "rendered" | "raw" }} input
+ * @returns {Promise<Response>}
+ */
+async function renderDirectoryFileRoute(input) {
+  const decodedPath = decodeRoutePath(input.routePath);
+  if (!decodedPath) {
+    return htmlResponse(renderErrorPage({
+      title: "Invalid path",
+      message: "That Markdown path could not be decoded.",
+      status: 400,
+      backHref: "/",
+    }), 400, input.method);
+  }
+
+  const resolved = await resolveDirectoryMarkdownPath(input.rootPath, decodedPath);
+  if (resolved.kind === "invalid") {
+    return htmlResponse(renderErrorPage({
+      title: "Invalid path",
+      message: "That request points outside the served root.",
+      status: 400,
+      backHref: "/",
+    }), 400, input.method);
+  }
+
+  if (resolved.kind === "missing") {
+    return htmlResponse(renderErrorPage({
+      title: "Not found",
+      message: "That Markdown file does not exist.",
+      status: 404,
+      backHref: "/",
+    }), 404, input.method);
+  }
+
+  if (resolved.kind === "unsupported") {
+    return htmlResponse(renderErrorPage({
+      title: "Unsupported type",
+      message: "mdview only serves .md and .markdown files.",
+      status: 415,
+      backHref: "/",
+    }), 415, input.method);
+  }
+
+  return await renderFilePageResponse({
+    method: input.method,
+    filePath: resolved.filePath,
+    relativePath: resolved.relativePath,
+    renderedHref: `/view/${encodeRoutePath(resolved.relativePath)}`,
+    rawHref: `/raw/${encodeRoutePath(resolved.relativePath)}`,
+    backHref: "/",
+    activeView: input.activeView,
+  });
+}
+
+/**
+ * @param {{ method: string; filePath: string; relativePath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw" }} input
+ * @returns {Promise<Response>}
+ */
+async function renderFilePageResponse(input) {
+  const markdown = await Bun.file(input.filePath).text();
+  const title = toFileTitle(input.relativePath);
+
+  if (input.activeView === "raw") {
+    return htmlResponse(renderMarkdownPage({
+      title,
+      relativePath: input.relativePath,
+      renderedHref: input.renderedHref,
+      rawHref: input.rawHref,
+      backHref: input.backHref,
+      activeView: input.activeView,
+      bodyHtml: `<section class="surface raw-body"><pre class="raw-block"><code>${escapeHtml(markdown)}</code></pre></section>`,
+    }), 200, input.method);
+  }
+
+  const renderedHtml = Bun.markdown.html(markdown, MARKDOWN_OPTIONS);
+  return htmlResponse(renderMarkdownPage({
+    title,
+    relativePath: input.relativePath,
+    renderedHref: input.renderedHref,
+    rawHref: input.rawHref,
+    backHref: input.backHref,
+    activeView: input.activeView,
+    bodyHtml: `<article class="surface markdown-body">${renderedHtml}</article>`,
+  }), 200, input.method);
+}
+
+/**
+ * @param {string} rootPath
+ * @returns {Promise<MarkdownFile[]>}
+ */
+async function listMarkdownFiles(rootPath) {
+  /** @type {MarkdownFile[]} */
+  const files = [];
+  await walkDirectory(rootPath, rootPath, files);
+  files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  return files;
+}
+
+/**
+ * @param {string} rootPath
+ * @param {string} directoryPath
+ * @param {MarkdownFile[]} files
+ * @returns {Promise<void>}
+ */
+async function walkDirectory(rootPath, directoryPath, files) {
+  const entries = await readdir(directoryPath, { withFileTypes: true });
+  entries.sort((left, right) => left.name.localeCompare(right.name));
+
+  for (const entry of entries) {
+    if (entry.isSymbolicLink()) continue;
+
+    const entryPath = path.join(directoryPath, entry.name);
+
+    if (entry.isDirectory()) {
+      await walkDirectory(rootPath, entryPath, files);
+      continue;
+    }
+
+    if (!entry.isFile()) continue;
+    if (!isMarkdownFile(entryPath)) continue;
+
+    const entryStat = await stat(entryPath);
+    files.push({
+      absolutePath: entryPath,
+      relativePath: toRelativePath(rootPath, entryPath),
+      modifiedAt: entryStat.mtime,
+    });
+  }
+}
+
+/**
+ * @param {string} rootPath
+ * @param {string} requestedPath
+ * @returns {Promise<ResolveResult>}
+ */
+async function resolveDirectoryMarkdownPath(rootPath, requestedPath) {
+  if (!requestedPath) return { kind: "invalid" };
+  if (requestedPath.includes("\0") || requestedPath.includes("\\")) return { kind: "invalid" };
+
+  const candidatePath = path.resolve(rootPath, requestedPath);
+  if (!isWithinPath(rootPath, candidatePath)) return { kind: "invalid" };
+
+  if (!isMarkdownFile(candidatePath)) return { kind: "unsupported" };
+
+  const candidateStat = await getStat(candidatePath);
+  if (!candidateStat || !candidateStat.isFile()) return { kind: "missing" };
+
+  const realFilePath = await realpath(candidatePath);
+  if (!isWithinPath(rootPath, realFilePath)) return { kind: "invalid" };
+
+  return {
+    kind: "ok",
+    filePath: realFilePath,
+    relativePath: toRelativePath(rootPath, realFilePath),
+  };
+}
+
+/**
+ * @param {string} html
+ * @param {number} status
+ * @param {string} method
+ * @returns {Response}
+ */
+function htmlResponse(html, status, method) {
+  return new Response(method === "HEAD" ? null : html, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+    },
+  });
+}
+
+/**
+ * @param {string} rootPath
+ * @param {MarkdownFile[]} files
+ * @returns {string}
+ */
+function renderIndexPage(rootPath, files) {
+  const title = path.basename(rootPath) || rootPath;
+  const nav = renderNav({
+    backHref: "/",
+    renderedHref: "/",
+    rawHref: null,
+    activeView: "index",
+  });
+
+  const bodyHtml = files.length === 0
+    ? `<section class="surface empty-state"><p>No Markdown files found under this root.</p><p class="meta mono">${escapeHtml(rootPath)}</p></section>`
+    : `<section class="surface surface-body"><ul class="file-list">${files.map(renderFileRow).join("")}</ul></section>`;
+
+  return renderDocument({
+    title: `${title} · mdview`,
+    navHtml: nav,
+    contentHtml: `
+      <header class="page-header">
+        <p class="eyebrow">Directory</p>
+        <h1>${escapeHtml(title)}</h1>
+        <p class="meta mono">${escapeHtml(rootPath)}</p>
+        <p class="meta">${files.length} Markdown file${files.length === 1 ? "" : "s"}</p>
+      </header>
+      ${bodyHtml}
+    `,
+  });
+}
+
+/**
+ * @param {MarkdownFile} file
+ * @returns {string}
+ */
+function renderFileRow(file) {
+  const renderedHref = `/view/${encodeRoutePath(file.relativePath)}`;
+  const rawHref = `/raw/${encodeRoutePath(file.relativePath)}`;
+  const title = toFileTitle(file.relativePath);
+
+  return `
+    <li class="file-row">
+      <a class="file-card" href="${renderedHref}">
+        <p class="file-title">${escapeHtml(title)}</p>
+        <p class="file-path mono">${escapeHtml(file.relativePath)}</p>
+        <p class="file-time">Updated ${escapeHtml(formatTimestamp(file.modifiedAt))}</p>
+      </a>
+      <div class="file-actions-row">
+        <a class="file-action" href="${rawHref}">Raw</a>
+      </div>
+    </li>
+  `;
+}
+
+/**
+ * @param {{ title: string; relativePath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string }} input
+ * @returns {string}
+ */
+function renderMarkdownPage(input) {
+  return renderDocument({
+    title: `${input.title} · mdview`,
+    navHtml: renderNav({
+      backHref: input.backHref,
+      renderedHref: input.renderedHref,
+      rawHref: input.rawHref,
+      activeView: input.activeView,
+    }),
+    contentHtml: `
+      <header class="page-header">
+        <p class="eyebrow">${input.activeView === "raw" ? "Raw" : "Rendered"}</p>
+        <h1>${escapeHtml(input.title)}</h1>
+        <p class="meta mono">${escapeHtml(input.relativePath)}</p>
+      </header>
+      ${input.bodyHtml}
+    `,
+  });
+}
+
+/**
+ * @param {{ title: string; message: string; status: number; backHref: string | null }} input
+ * @returns {string}
+ */
+function renderErrorPage(input) {
+  return renderDocument({
+    title: `${input.status} ${input.title} · mdview`,
+    navHtml: renderNav({
+      backHref: input.backHref,
+      renderedHref: input.backHref ?? "/",
+      rawHref: null,
+      activeView: "error",
+    }),
+    contentHtml: `
+      <header class="page-header">
+        <p class="eyebrow">Error ${input.status}</p>
+        <h1>${escapeHtml(input.title)}</h1>
+        <p class="meta">${escapeHtml(input.message)}</p>
+      </header>
+      <section class="surface error-body">
+        <p>${escapeHtml(input.message)}</p>
+        ${input.backHref ? `<p><a href="${input.backHref}">Back to root</a></p>` : ""}
+      </section>
+    `,
+  });
+}
+
+/**
+ * @param {{ title: string; navHtml: string; contentHtml: string }} input
+ * @returns {string}
+ */
+function renderDocument(input) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>${escapeHtml(input.title)}</title>
+    <style>${STYLES}</style>
+  </head>
+  <body>
+    <div class="page">
+      <nav class="top-nav">${input.navHtml}</nav>
+      <main class="shell">${input.contentHtml}</main>
+    </div>
+  </body>
+</html>`;
+}
+
+/**
+ * @param {{ backHref: string | null; renderedHref: string; rawHref: string | null; activeView: "index" | "rendered" | "raw" | "error" }} input
+ * @returns {string}
+ */
+function renderNav(input) {
+  const actions = [];
+
+  if (input.backHref) {
+    actions.push(`<a class="pill" href="${input.backHref}">Back</a>`);
+  }
+
+  actions.push(`<a class="pill ${input.activeView === "rendered" || input.activeView === "index" ? "active" : ""}" href="${input.renderedHref}">${input.activeView === "index" ? "Index" : "Rendered"}</a>`);
+
+  if (input.rawHref) {
+    actions.push(`<a class="pill ${input.activeView === "raw" ? "active" : ""}" href="${input.rawHref}">Raw</a>`);
+  }
+
+  return `
+    <div class="nav-row">
+      <a class="brand" href="/">mdview</a>
+      <div class="nav-actions">${actions.join("")}</div>
+    </div>
+  `;
+}
+
+/**
+ * @param {string} value
+ * @returns {string | null}
+ */
+function decodeRoutePath(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function encodeRoutePath(value) {
+  return value
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+/**
+ * @param {string} filePath
+ * @returns {boolean}
+ */
+function isMarkdownFile(filePath) {
+  return ALLOWED_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+}
+
+/**
+ * @param {string} rootPath
+ * @param {string} targetPath
+ * @returns {boolean}
+ */
+function isWithinPath(rootPath, targetPath) {
+  const root = path.resolve(rootPath);
+  const target = path.resolve(targetPath);
+  const fileSystemRoot = path.parse(root).root;
+
+  if (root === fileSystemRoot) return target.startsWith(root);
+  if (target === root) return true;
+
+  return target.startsWith(`${root}${path.sep}`);
+}
+
+/**
+ * @param {string} rootPath
+ * @param {string} filePath
+ * @returns {string}
+ */
+function toRelativePath(rootPath, filePath) {
+  return path.relative(rootPath, filePath).split(path.sep).join("/");
+}
+
+/**
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function toFileTitle(relativePath) {
+  const basename = path.basename(relativePath);
+  return basename.replace(/\.(md|markdown)$/i, "") || basename;
+}
+
+/**
+ * @param {Date} date
+ * @returns {string}
+ */
+function formatTimestamp(date) {
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/**
+ * @param {AppConfig} appConfig
+ * @param {CliOptions} options
+ */
+function printStartupInfo(appConfig, options) {
+  const localHost = isExposedHost(options.host) ? "127.0.0.1" : options.host;
+  const lanHost = detectLanHost();
+
+  console.log(`mdview serving: ${appConfig.servedPath}`);
+  console.log(`mode: ${appConfig.mode}`);
+  console.log(`local url: ${buildUrl(localHost, options.port)}`);
+
+  if (isExposedHost(options.host) && lanHost) {
+    console.log(`lan url: ${buildUrl(lanHost, options.port)}`);
+  }
+
+  if (options.host === DEFAULT_HOST) {
+    console.log("warning: server is exposed on all interfaces");
+  }
+}
+
+/**
+ * @returns {string | null}
+ */
+function detectLanHost() {
+  const interfaces = os.networkInterfaces();
+
+  for (const addresses of Object.values(interfaces)) {
+    if (!addresses) continue;
+
+    for (const address of addresses) {
+      if (address.family !== "IPv4") continue;
+      if (address.internal) continue;
+      return address.address;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * @param {string} host
+ * @param {number} port
+ * @returns {string}
+ */
+function buildUrl(host, port) {
+  const formattedHost = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+  return `http://${formattedHost}:${port}`;
+}
+
+/**
+ * @param {string} host
+ * @returns {boolean}
+ */
+function isExposedHost(host) {
+  return host === "0.0.0.0" || host === "::";
+}
+
+/**
+ * @param {ReturnType<typeof Bun.serve>} server
+ */
+function registerShutdown(server) {
+  const stop = () => {
+    server.stop(true);
+    process.exit(0);
+  };
+
+  process.on("SIGINT", stop);
+  process.on("SIGTERM", stop);
+}
+
+/**
+ * @param {string} filePath
+ * @returns {Promise<import("node:fs").Stats | null>}
+ */
+async function getStat(filePath) {
+  try {
+    return await stat(filePath);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isBusyPortError(error) {
+  if (!(error instanceof Error)) return false;
+
+  return error.message.includes("EADDRINUSE") || error.message.toLowerCase().includes("address already in use");
+}
+
+/**
+ * @param {unknown} error
+ */
+function handleFatalError(error) {
+  if (error instanceof Error) fail(error.message);
+  fail(String(error));
+}
+
+/**
+ * @param {string} message
+ * @returns {never}
+ */
+function fail(message) {
+  console.error(`error: ${message}`);
+  process.exit(1);
+}
