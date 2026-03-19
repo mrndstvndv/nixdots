@@ -32,9 +32,12 @@ modules/pi/
 - If the `piAgent` flake input exists, the module installs the `pi` binary from that flake and derives `lastChangelogVersion` from the package version.
 - The generated settings inject:
   - the built extension package path
+  - the local `../personal` package path, which resolves to `~/.pi/personal`
   - the active theme (`no-thinking-bg`)
   - `themes = [ "~/.pi/agent/themes" ]`
   - `hideThinkingBlock = true`
+- `~/.pi/personal` is for private/internal pi stuff not meant for public sharing.
+- Put private skills in `~/.pi/personal/skills/`, private extensions in `~/.pi/personal/extensions/`, private prompt templates in `~/.pi/personal/prompts/`, and private themes in `~/.pi/personal/themes/` when they should stay out of the public nixdots module.
 
 ## What to edit
 
