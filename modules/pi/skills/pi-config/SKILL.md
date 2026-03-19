@@ -1,28 +1,78 @@
 ---
 name: pi-config
-description: Instructions for modifying pi configuration. Use when you need to change pi settings, skills, extensions, or prompts.
+description: Declarative pi config for nixdots. Use when changing pi settings, skills, prompt templates, themes, or extensions under modules/pi/.
 ---
 
 # Pi Config
 
-All pi configuration is managed via nix in `~/.config/nixdots/modules/pi/`. Modify config there, not in default pi install locations.
+All pi config is source-controlled in `~/.config/nixdots/modules/pi/`. Edit that tree, not the live `~/.pi/agent/` install paths.
 
-## Location
+## Source of truth
 
 ```
-~/.config/nixdots/modules/pi/
-├── AGENTS.md          # Agent instructions
-├── default.nix        # Nix module config
-├── settings.json      # Pi settings
-├── skills/            # Custom skills
-├── extensions/       # Custom extensions
-└── prompt-templates/ # Custom prompt templates
+modules/pi/
+├── AGENTS.md            # Global pi instructions
+├── default.nix          # Home Manager module + generated settings
+├── settings.json         # Base pi settings read by Nix
+├── package/             # NPM package for custom extensions
+│   ├── package.json
+│   ├── package-lock.json
+│   └── extensions/
+├── skills/              # Custom skills (recursive SKILL.md discovery)
+├── prompt-templates/    # Markdown prompt templates
+└── themes/              # Theme JSON files
 ```
 
-## Usage
+## Architecture
 
-- Skills: `~/.config/nixdots/modules/pi/skills/<name>/`
-- Extensions: `~/.config/nixdots/modules/pi/extensions/`
-- Settings & theme: edit `~/.config/nixdots/modules/pi/default.nix` (configure in `piSettingsFinal`)
-- Themes: add JSON files to `~/.config/nixdots/modules/pi/themes/`
-- Source settings template: `~/.config/nixdots/modules/pi/settings.json` (minimal, mostly for nix to read)
+- `default.nix` owns the live `~/.pi/agent/settings.json` file.
+- `settings.json` is the base config; `default.nix` merges in generated values.
+- The module builds `package/` with `pkgs.buildNpmPackage`.
+- `npmDepsHash` must be updated whenever `package/package-lock.json` changes.
+- If the `piAgent` flake input exists, the module installs the `pi` binary from that flake and derives `lastChangelogVersion` from the package version.
+- The generated settings inject:
+  - the built extension package path
+  - the active theme (`no-thinking-bg`)
+  - `themes = [ "~/.pi/agent/themes" ]`
+  - `hideThinkingBlock = true`
+
+## What to edit
+
+- **Settings**: `modules/pi/settings.json`
+- **Generated settings / package wiring**: `modules/pi/default.nix`
+- **Extensions**: `modules/pi/package/extensions/*.ts`
+- **Extension deps**: `modules/pi/package/package.json` + `package-lock.json`
+- **Skills**: `modules/pi/skills/<name>/SKILL.md`
+- **Prompt templates**: `modules/pi/prompt-templates/*.md`
+- **Themes**: `modules/pi/themes/*.json`
+
+## Important behavior
+
+- Do not hand-edit `~/.pi/agent/settings.json`; Home Manager will overwrite it.
+- Use `/reload` in pi after changing skills, prompts, or extensions.
+- Themes hot-reload automatically.
+- Skills are discovered recursively from `SKILL.md` files under `skills/`.
+- `pi config` can toggle installed resources, but declarative config is the source of truth here.
+- Relative paths in pi settings resolve from `~/.pi/agent/`, so keep generated paths deterministic.
+- Third-party extensions run with full system access. Review code before enabling anything external.
+
+## Less obvious pi features worth using
+
+- `packages` accepts object filters, not just strings, if you need to narrow what a package loads.
+- `enableSkillCommands` controls `/skill:name` registration.
+- `npmCommand` can pin npm installs to a wrapper like `mise` or `asdf`.
+- Skills can live in other harness dirs too, but this module only manages `modules/pi/skills/`.
+- Prompt templates expand with `/name`.
+- Pi packages can auto-discover `extensions/`, `skills/`, `prompts/`, and `themes/` when no `pi` manifest is present.
+
+## Extension package notes
+
+- The `package/` tree is a standalone pi package.
+- Resources are registered in `package/package.json` under the `pi` key.
+- Local extension entrypoints should stay relative to the package root, e.g. `./extensions/web-fetch.ts`.
+- If you add a dependency, update the lockfile, then refresh `npmDepsHash` in `default.nix`.
+- The module already uses this package for custom tooling like web fetch/search, LSP, notifications, and handoff helpers.
+
+## Rebuild path
+
+After config changes, rebuild Home Manager / Darwin, then reload pi if it is already running.
