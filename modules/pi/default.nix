@@ -61,4 +61,7 @@ in
 
   # Pure, generated settings.json - no symlinks, no mutable state
   home.file.".pi/agent/settings.json".text = builtins.toJSON piSettingsFinal;
+
+  # Custom provider model definitions
+  home.file.".pi/agent/models.json".source = ./models.json;
 }

@@ -14,6 +14,7 @@ modules/pi/
 ├── AGENTS.md            # Global pi instructions
 ├── default.nix          # Home Manager module + generated settings
 ├── settings.json         # Base pi settings read by Nix
+├── models.json           # Custom provider/model definitions (e.g. OpenRouter Qwen)
 ├── package/             # NPM package for custom extensions
 │   ├── package.json
 │   ├── package-lock.json
@@ -42,6 +43,7 @@ modules/pi/
 ## What to edit
 
 - **Settings**: `modules/pi/settings.json`
+- **Custom models/providers**: `modules/pi/models.json` (symlinked to `~/.pi/agent/models.json`)
 - **Generated settings / package wiring**: `modules/pi/default.nix`
 - **Extensions**: `modules/pi/package/extensions/*.ts`
 - **Extension deps**: `modules/pi/package/package.json` + `package-lock.json`
@@ -52,6 +54,8 @@ modules/pi/
 ## Important behavior
 
 - Do not hand-edit `~/.pi/agent/settings.json`; Home Manager will overwrite it.
+- Do not hand-edit `~/.pi/agent/models.json`; Home Manager will overwrite it.
+- `models.json` replaces the built-in model list for a provider. Only models listed there will appear in `/model`. To add more models, append to the array.
 - Use `/reload` in pi after changing skills, prompts, or extensions.
 - Themes hot-reload automatically.
 - Skills are discovered recursively from `SKILL.md` files under `skills/`.
