@@ -56,8 +56,27 @@ export interface AuthMethod {
   description: string | null;
 }
 
+export interface SessionConfigOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  type: "select";
+  currentValue: string;
+  options: Array<{
+    value: string;
+    name: string;
+    description?: string | null;
+  }>;
+}
+
 export interface NewSessionResult {
   sessionId: string;
+  configOptions?: SessionConfigOption[];
+}
+
+export interface SetSessionConfigOptionResult {
+  configOptions: SessionConfigOption[];
 }
 
 export interface McpServerConfig {
@@ -410,11 +429,28 @@ export class AcpClient {
     return new Session(
       result.sessionId,
       this,
+      result.configOptions ?? [],
       () => {
         this.sessions.delete(result.sessionId);
         this.sessionTextBuffers.delete(result.sessionId);
       }
     );
+  }
+
+  async setConfigOption(
+    sessionId: string,
+    configId: string,
+    value: string
+  ): Promise<SetSessionConfigOptionResult> {
+    if (!this.sessions.has(sessionId)) {
+      throw new AcpError(-32602, `Session not found: ${sessionId}`);
+    }
+
+    return this.request("session/set_config_option", {
+      sessionId,
+      configId,
+      value,
+    }) as Promise<SetSessionConfigOptionResult>;
   }
 
   /**
@@ -546,6 +582,7 @@ export class Session {
   constructor(
     public readonly id: string,
     private client: AcpClient,
+    public configOptions: SessionConfigOption[],
     private onDispose: () => void
   ) {}
 
@@ -555,6 +592,15 @@ export class Session {
    */
   async prompt(parts: PromptPart[], onChunk?: (text: string) => void): Promise<PromptResult> {
     return this.client.prompt(this.id, parts, onChunk);
+  }
+
+  /**
+   * Update a session configuration option, e.g. model or mode.
+   */
+  async setConfigOption(configId: string, value: string): Promise<SessionConfigOption[]> {
+    const result = await this.client.setConfigOption(this.id, configId, value);
+    this.configOptions = result.configOptions;
+    return this.configOptions;
   }
 
   /**

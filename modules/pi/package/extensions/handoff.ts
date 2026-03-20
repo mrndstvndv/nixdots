@@ -53,8 +53,8 @@ function getAcpPool(cwd: string): AcpPool {
 		acpPool = createAcpPool({
 			cwd,
 			command: "gemini",
-			// Use the Flash model preview for faster/cheaper handoffs
-			args: ["flash", "gemini-3-flash-preview", "--experimental-acp"],
+			// Prefer Flash at process startup. We'll also set the ACP session model when supported.
+			args: ["--model", HANDOFF_MODEL, "--acp"],
 			authMethod: getGeminiAuthMethod(hasApiKey),
 			env: {
 				GEMINI_CLI_DISABLE_SESSION_PERSISTENCE: "true",
@@ -66,6 +66,18 @@ function getAcpPool(cwd: string): AcpPool {
 		});
 	}
 	return acpPool;
+}
+
+const HANDOFF_MODEL = "gemini-3-flash-preview";
+
+function findModelConfigId(
+	configOptions: Array<{ id: string; category?: string | null }>
+): string | null {
+	const modelOption = configOptions.find((option) => option.category === "model");
+	if (modelOption) return modelOption.id;
+
+	const fallback = configOptions.find((option) => option.id === "model");
+	return fallback?.id ?? null;
 }
 
 function formatHandoffError(error: unknown): string {
@@ -152,6 +164,18 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					try {
+						const modelConfigId = findModelConfigId(session.configOptions);
+						if (modelConfigId) {
+							const flashOption = session.configOptions
+								.find((option) => option.id === modelConfigId)
+								?.options.find((option) => option.value === HANDOFF_MODEL);
+
+							if (flashOption) {
+								updateMessage("Selecting model...");
+								await session.setConfigOption(modelConfigId, HANDOFF_MODEL);
+							}
+						}
+
 						updateMessage("Generating...");
 						
 						// Stream text chunks to update the loader in real-time
