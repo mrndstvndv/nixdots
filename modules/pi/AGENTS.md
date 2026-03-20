@@ -50,6 +50,8 @@ function process(user: User | null) {
 - Use `uv` instead of `python` (e.g., `uv run script.py`)
 - Use `bun` instead of `node` or `npm`
 - Use `bunx` instead of `npx`
+- Prefer the custom `edit` tool for file content changes.
+- For multiple replacements in one file, prefer `edit` with the `edits` array over several separate edit calls or full-file rewrites.
 - When moving or renaming files, prefer the shell mv command (via bash) instead of reading and rewriting files with tool calls — it saves tokens and preserves file metadata. Use read/edit/write only for content edits.
 
 ## Token Efficiency
