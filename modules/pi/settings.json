@@ -5,7 +5,8 @@
   "lsp": {
     "hookMode": "edit_write"
   },
-  "defaultProvider": "codex",
-  "defaultModel": "minimax-m2.5-free",
+  "defaultProvider": "opencode",
+  "defaultModel": "mimo-v2-pro-free",
+  "defaultThinkingLevel": "xhigh",
   "hideThinkingBlock": false
 }
