@@ -1,5 +1,6 @@
 import { type ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import { Text } from "@mariozechner/pi-tui";
 import { createTimedSignal, DEFAULT_SEARCH_TIMEOUT_MS, truncateOutput } from "./web-tools.js";
 
 const EXA_MCP_URL = "https://mcp.exa.ai/mcp";
@@ -59,6 +60,42 @@ export default function webSearchExtension(pi: ExtensionAPI) {
     label: "Web Search",
     description: "Search the web with Exa and return the most relevant result context for current or recent information.",
     parameters: webSearchSchema,
+    renderCall(args, theme) {
+      const query = args.query.length > 60 ? `${args.query.slice(0, 57)}...` : args.query;
+      return new Text(theme.fg("toolTitle", theme.bold("web_search ")) + theme.fg("accent", `"${query}"`), 0, 0);
+    },
+    renderResult(result, { expanded, isPartial }, theme) {
+      if (isPartial) return new Text(theme.fg("warning", "Searching..."), 0, 0);
+
+      const details = result.details as { query?: string; empty?: boolean; truncated?: boolean } | undefined;
+      const content = result.content[0];
+
+      if (details?.empty) {
+        return new Text(theme.fg("muted", "No results found"), 0, 0);
+      }
+
+      const output = content?.type === "text" ? content.text : "";
+      const allLines = output.split("\n");
+      const lineCount = allLines.filter((l) => l.trim()).length;
+
+      let text = theme.fg("success", `${lineCount} lines`);
+      if (details?.truncated) {
+        text += theme.fg("warning", " (truncated)");
+      }
+
+      const displayLines = expanded ? allLines : allLines.slice(0, 5);
+      for (const line of displayLines) {
+        text += `\n${theme.fg("dim", line)}`;
+      }
+      if (!expanded) {
+        const remaining = allLines.length - 5;
+        if (remaining > 0) {
+          text += `\n${theme.fg("muted", `... ${remaining} more lines (ctrl+o to expand)`)}`;
+        }
+      }
+
+      return new Text(text, 0, 0);
+    },
     async execute(_toolCallId, params, signal, onUpdate) {
       const numResults = params.numResults ?? DEFAULT_NUM_RESULTS
       const livecrawl = params.livecrawl ?? DEFAULT_LIVECRAWL_MODE

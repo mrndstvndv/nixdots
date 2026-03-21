@@ -1,5 +1,6 @@
 import { formatSize, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import { Text } from "@mariozechner/pi-tui";
 import TurndownService from "turndown";
 import {
   createTimedSignal,
@@ -44,6 +45,49 @@ export default function webFetchExtension(pi: ExtensionAPI) {
     description:
       "Fetch a URL and return markdown, plain text, HTML, or an image attachment. Blocks oversized responses and converts HTML to markdown with Turndown.",
     parameters: webFetchSchema,
+    renderCall(args, theme) {
+      let text = theme.fg("toolTitle", theme.bold("web_fetch "));
+      text += theme.fg("accent", args.url);
+      if (args.format && args.format !== "markdown") {
+        text += theme.fg("dim", ` (${args.format})`);
+      }
+      return new Text(text, 0, 0);
+    },
+    renderResult(result, { expanded, isPartial }, theme) {
+      if (isPartial) return new Text(theme.fg("warning", "Fetching..."), 0, 0);
+
+      const details = result.details as { url?: string; image?: boolean; truncated?: boolean; bytes?: number } | undefined;
+
+      if (details?.image) {
+        return new Text(theme.fg("success", "Image loaded"), 0, 0);
+      }
+
+      const content = result.content[0];
+      const output = content?.type === "text" ? content.text : "";
+      const allLines = output.split("\n");
+      const lineCount = allLines.filter((l) => l.trim()).length;
+
+      let text = theme.fg("success", `${lineCount} lines`);
+      if (details?.bytes) {
+        text += theme.fg("dim", ` (${formatSize(details.bytes)})`);
+      }
+      if (details?.truncated) {
+        text += theme.fg("warning", " (truncated)");
+      }
+
+      const displayLines = expanded ? allLines : allLines.slice(0, 5);
+      for (const line of displayLines) {
+        text += `\n${theme.fg("dim", line)}`;
+      }
+      if (!expanded) {
+        const remaining = allLines.length - 5;
+        if (remaining > 0) {
+          text += `\n${theme.fg("muted", `... ${remaining} more lines (ctrl+o to expand)`)}`;
+        }
+      }
+
+      return new Text(text, 0, 0);
+    },
     async execute(toolCallId, params, signal, onUpdate, _ctx) {
       if (!isHttpUrl(params.url)) {
         throw new Error("URL must start with http:// or https://")
