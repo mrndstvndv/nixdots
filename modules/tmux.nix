@@ -16,6 +16,7 @@ in
   config.programs.tmux = {
     enable = true;
     extraConfig = ''
+      set -g default-terminal "tmux-256color"
       set -sg escape-time 5
       set -g allow-passthrough on
       set -g extended-keys on
