@@ -36,8 +36,6 @@ let
     // {
       # Reference the package directly in the nix store (fully deterministic)
       packages = [ "${piExtensions}" "../personal" ];
-      theme = "no-thinking-bg";
-      themes = [ "~/.pi/agent/themes" ];
       hideThinkingBlock = true;
     };
 in
@@ -52,9 +50,6 @@ in
 
   # Skills - symlink entire directory
   home.file.".pi/agent/skills".source = ./skills;
-
-  # Themes - symlink entire directory
-  home.file.".pi/agent/themes".source = ./themes;
 
   # Prompt templates - symlink to ~/.pi/agent/prompts/
   home.file.".pi/agent/prompts".source = ./prompt-templates;

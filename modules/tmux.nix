@@ -2,7 +2,7 @@
 let
   cfg = config.custom.tmux;
   statusRight = if pkgs.stdenv.isDarwin
-    then "#[fg=colour130]#(/opt/homebrew/bin/smctemp -c)°"
+    then "#(/opt/homebrew/bin/smctemp -c)°"
     else "";
   statusInterval = if pkgs.stdenv.isDarwin then 2 else 15;
 in
@@ -33,11 +33,14 @@ in
 
       set -g status-position ${cfg.statusPosition}
 
-      # Statusbar styling - Gruvbox dark inspired
-      set -g status-style 'bg=default,fg=default'
-
-      # Left: session name in warm orange-brown
-      set -g status-left '#[fg=colour130,bold]#S #[fg=default]| '
+      # Statusbar styling - pure black
+      set -g status-style 'fg=default,bg=#000000'
+      set -g status-left-style 'fg=default,bg=#000000'
+      set -g status-right-style 'fg=default,bg=#000000'
+      set -g window-status-style 'fg=default,bg=#000000'
+      set -g window-status-current-style 'fg=default,bg=#000000'
+      set -g window-status-last-style 'fg=default,bg=#000000'
+      set -g status-left '#S | '
       set -g status-left-length 20
 
       # Right: CPU temperature (macOS only)
@@ -45,15 +48,11 @@ in
       set -g status-interval ${toString statusInterval}
 
       # Window list: minimal format
-      set -g window-status-format '#[fg=colour245]#W '
-      set -g window-status-current-format '#[fg=colour223,bold]#W '
-
-      # Remove separators
+      set -g window-status-format '#W '
+      set -g window-status-current-format '#[bold]#W '
       set -g window-status-separator ""
 
-      # Rounded corners for popup borders
       set -g popup-border-lines rounded
-      set -g popup-border-style 'fg=colour245'
 
       set-option -g default-shell "${pkgs.fish}/bin/fish"
       set-option -g default-command "${pkgs.fish}/bin/fish -i"
