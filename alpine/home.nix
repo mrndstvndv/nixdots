@@ -1,17 +1,20 @@
-{ pkgs, lib, ... }:
+{ pkgs, piAgent ? null, lib, ... }:
 {
   nixpkgs.config = {
     allowUnfree = true;
     allowUnfreePredicate = (_: true);
   };
 
-  imports = [
-    ../modules/fish.nix
-    ../modules/tmux.nix
-    ../modules/neovim.nix
-    ../modules/packages-common.nix
-    ../modules/pi
-  ];
+  imports =
+    lib.optionals (piAgent != null) [
+      piAgent.homeManagerModules.default
+    ]
+    ++ [
+      ../modules/fish.nix
+      ../modules/tmux.nix
+      ../modules/neovim.nix
+      ../modules/packages-common.nix
+    ];
 
   custom.bun.installPackage = false;
 

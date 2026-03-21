@@ -1,4 +1,4 @@
-{ config, lib, pkgs, my-neovim, ... }:
+{ config, lib, pkgs, my-neovim, piAgent ? null, ... }:
 {
   # Backup etc files instead of failing to activate generation if a file
   # already exists in /etc
@@ -24,7 +24,7 @@
 
     # Pass flake input my-neovim down to all Home Manager modules
     # (so ./home.nix -> ../modules/neovim.nix can see it).
-    extraSpecialArgs = { inherit my-neovim; };
+    extraSpecialArgs = { inherit my-neovim piAgent; };
 
     # Reuse our shared Home Manager config, which pulls in fish, tmux,
     # neovim, and common packages.
