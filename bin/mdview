@@ -371,6 +371,18 @@ img {
   border-radius: 0.9rem;
 }
 
+.markdown-body .mermaid {
+  margin: 1.2rem 0;
+  padding: 1rem;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.markdown-body .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 .raw-block {
   margin: 0;
   overflow-x: auto;
@@ -781,7 +793,8 @@ async function renderFilePageResponse(input) {
     }), 200, input.method);
   }
 
-  const renderedHtml = Bun.markdown.html(markdown, MARKDOWN_OPTIONS);
+  const rawHtml = Bun.markdown.html(markdown, MARKDOWN_OPTIONS);
+  const renderedHtml = transformMermaidBlocks(rawHtml);
   return htmlResponse(renderMarkdownPage({
     title,
     relativePath: input.relativePath,
@@ -790,6 +803,7 @@ async function renderFilePageResponse(input) {
     backHref: input.backHref,
     activeView: input.activeView,
     bodyHtml: `<article class="surface markdown-body">${renderedHtml}</article>`,
+    hasMermaid: renderedHtml !== rawHtml,
   }), 200, input.method);
 }
 
@@ -936,7 +950,7 @@ function renderFileRow(file) {
 }
 
 /**
- * @param {{ title: string; relativePath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string }} input
+ * @param {{ title: string; relativePath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string; hasMermaid?: boolean }} input
  * @returns {string}
  */
 function renderMarkdownPage(input) {
@@ -956,6 +970,7 @@ function renderMarkdownPage(input) {
       </header>
       ${input.bodyHtml}
     `,
+    hasMermaid: input.hasMermaid,
   });
 }
 
@@ -987,10 +1002,24 @@ function renderErrorPage(input) {
 }
 
 /**
- * @param {{ title: string; navHtml: string; contentHtml: string }} input
+ * @param {{ title: string; navHtml: string; contentHtml: string; hasMermaid?: boolean }} input
  * @returns {string}
  */
 function renderDocument(input) {
+  const mermaidScript = input.hasMermaid
+    ? `<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains("") ? "default" : undefined });
+  // Re-init on dark/light mode toggle
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const rerender = () => {
+    mermaid.initialize({ startOnLoad: false, theme: mq.matches ? "dark" : "default" });
+    mermaid.run();
+  };
+  mq.addEventListener("change", rerender);
+</script>`
+    : "";
+
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -1005,6 +1034,7 @@ function renderDocument(input) {
       <nav class="top-nav">${input.navHtml}</nav>
       <main class="shell">${input.contentHtml}</main>
     </div>
+    ${mermaidScript}
   </body>
 </html>`;
 }
@@ -1108,6 +1138,33 @@ function formatTimestamp(date) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+/**
+ * Convert <pre><code class="language-mermaid">...</code></pre> blocks into
+ * <div class="mermaid">...</div> so Mermaid.js can render them client-side.
+ * @param {string} html
+ * @returns {string}
+ */
+function transformMermaidBlocks(html) {
+  return html.replace(
+    /<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
+    (_match, content) => `<div class="mermaid">${unescapeMinimalHtmlEntities(content)}</div>`,
+  );
+}
+
+/**
+ * Decode the minimal set of HTML entities that Bun.markdown.html() emits.
+ * @param {string} value
+ * @returns {string}
+ */
+function unescapeMinimalHtmlEntities(value) {
+  return value
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'");
 }
 
 /**
