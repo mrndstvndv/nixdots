@@ -54,7 +54,6 @@
     brews = [
       "smctemp"
       "jadx"
-      "agent-browser"
       # "kotlin-lsp"
     ];
   };
