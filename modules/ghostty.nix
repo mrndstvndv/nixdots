@@ -9,7 +9,7 @@
       command = "${pkgs.fish}/bin/fish -c '${pkgs.tmux}/bin/tmux new -As0 ${pkgs.fish}/bin/fish'";
       background-opacity = "0.9";
       background-blur = true;
-      theme = "Gruvbox Dark Hard";
+      # theme = "Gruvbox Dark Hard";
 
       window-padding-x = 0;
       window-padding-y = 0;
