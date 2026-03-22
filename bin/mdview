@@ -24,6 +24,27 @@ const MARKDOWN_OPTIONS = {
   tagFilter: true,
 };
 
+const HIGHLIGHT_CSS_URL = "https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css";
+const HIGHLIGHT_JS_URL = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js";
+const HIGHLIGHT_LANG_PACKS = [
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/typescript.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/python.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/rust.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/go.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/bash.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/json.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/yaml.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/toml.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/nix.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/dockerfile.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/sql.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/ruby.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/java.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/cpp.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/shell.min.js",
+  "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/dart.min.js",
+];
+
 const STYLES = `
 :root {
   color-scheme: light dark;
@@ -322,8 +343,8 @@ img {
   overflow-x: auto;
   padding: 1rem;
   border-radius: 1rem;
-  background: var(--code-block-bg);
-  color: var(--code-block-text);
+  background: #0d1117;
+  color: #c9d1d9;
 }
 
 .markdown-body pre code {
@@ -332,6 +353,12 @@ img {
   padding: 0;
   border-radius: 0;
   font-size: 0.95rem;
+}
+
+/* highlight.js overrides */
+.hljs {
+  background: transparent !important;
+  padding: 0 !important;
 }
 
 .markdown-body blockquote {
@@ -389,8 +416,8 @@ img {
   font: 0.95rem/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   padding: 1rem;
   border-radius: 1rem;
-  background: var(--code-block-bg);
-  color: var(--code-block-text);
+  background: #0d1117;
+  color: #c9d1d9;
 }
 
 .empty-state,
@@ -1019,6 +1046,8 @@ function renderDocument(input) {
 </script>`
     : "";
 
+  const langScripts = HIGHLIGHT_LANG_PACKS.map((url) => `<script src="${url}"></script>`).join("\n    ");
+
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -1026,6 +1055,7 @@ function renderDocument(input) {
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light dark">
     <title>${escapeHtml(input.title)}</title>
+    <link rel="stylesheet" href="${HIGHLIGHT_CSS_URL}">
     <style>${STYLES}</style>
   </head>
   <body>
@@ -1033,6 +1063,9 @@ function renderDocument(input) {
       <nav class="top-nav">${input.navHtml}</nav>
       <main class="shell">${input.contentHtml}</main>
     </div>
+    <script src="${HIGHLIGHT_JS_URL}"></script>
+    ${langScripts}
+    <script>hljs.highlightAll();</script>
     ${mermaidScript}
   </body>
 </html>`;
