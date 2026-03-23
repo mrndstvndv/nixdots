@@ -722,6 +722,25 @@ async function handleDirectoryRequest(request, appConfig) {
     });
   }
 
+  // Serve static files (images, etc.) from the root directory
+  if (!pathname.startsWith("/view/") && !pathname.startsWith("/raw/") && pathname !== "/") {
+    const decodedPath = decodeRoutePath(pathname.slice(1)); // Remove leading /
+    if (decodedPath) {
+      const resolvedPath = path.resolve(appConfig.rootPath, decodedPath);
+      if (isWithinPath(appConfig.rootPath, resolvedPath)) {
+        const fileStat = await getStat(resolvedPath);
+        if (fileStat && fileStat.isFile()) {
+          const file = Bun.file(resolvedPath);
+          return new Response(file, {
+            headers: {
+              "content-type": file.type || "application/octet-stream",
+            },
+          });
+        }
+      }
+    }
+  }
+
   return htmlResponse(renderErrorPage({
     title: "Not found",
     message: "That page does not exist under this mdview root.",
