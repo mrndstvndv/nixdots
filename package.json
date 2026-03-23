@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "marked": "^15.0.0",
+    "pdfkit": "^0.15.0"
+  }
+}

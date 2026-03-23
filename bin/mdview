@@ -4,6 +4,8 @@
 import { readdir, realpath, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import PDFDocument from "pdfkit";
+import { marked } from "marked";
 
 /** @typedef {{ inputPath: string; host: string; port: number }} CliOptions */
 /** @typedef {{ mode: "directory"; rootPath: string; servedPath: string }} DirectoryConfig */
@@ -11,6 +13,10 @@ import path from "node:path";
 /** @typedef {DirectoryConfig | FileConfig} AppConfig */
 /** @typedef {{ absolutePath: string; relativePath: string; modifiedAt: Date }} MarkdownFile */
 /** @typedef {{ kind: "ok"; filePath: string; relativePath: string } | { kind: "invalid" } | { kind: "missing" } | { kind: "unsupported" }} ResolveResult */
+/** @typedef {{ type: string; raw?: string; text?: string; depth?: number; ordered?: boolean; start?: number | string; tokens?: PdfToken[]; items?: PdfListItem[]; header?: PdfTableCell[]; rows?: PdfTableCell[][]; href?: string; title?: string | null; task?: boolean; checked?: boolean; align?: (string | null)[] }} PdfToken */
+/** @typedef {{ text?: string; tokens?: PdfToken[]; task?: boolean; checked?: boolean }} PdfListItem */
+/** @typedef {{ text?: string; tokens?: PdfToken[]; header?: boolean; align?: string | null }} PdfTableCell */
+/** @typedef {{ indent: number; rootPath: string; sourcePath: string }} PdfRenderContext */
 
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 3000;
@@ -496,14 +502,186 @@ img {
 }
 `;
 
+const PRINT_STYLES = `
+@page {
+  margin: 0.75in;
+}
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+html,
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #000000;
+}
+
+body {
+  font: 16px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.print-shell {
+  width: 100%;
+}
+
+.markdown-body {
+  max-width: none;
+  padding: 0;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body :is(h1, h2, h3, h4, h5, h6) {
+  line-height: 1.2;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body pre,
+.markdown-body table,
+.markdown-body hr {
+  margin-top: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.35rem;
+}
+
+.markdown-body li + li {
+  margin-top: 0.3rem;
+}
+
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.92em;
+  word-break: break-word;
+}
+
+.markdown-body pre {
+  overflow: visible;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.45rem;
+  background: #ffffff;
+  color: inherit;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.markdown-body pre code {
+  background: transparent !important;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.92rem;
+  white-space: inherit;
+}
+
+.hljs {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.markdown-body blockquote {
+  padding: 0.25rem 1rem;
+  border-left: 3px solid #d0d7de;
+  background: transparent;
+  border-radius: 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid #d0d7de;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #d0d7de;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-body tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.markdown-body img,
+.markdown-body .mermaid {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.markdown-body img {
+  border-radius: 0;
+}
+
+.markdown-body .mermaid {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.markdown-body .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+`;
+
 const HELP_TEXT = `mdview <path> [--host 0.0.0.0] [--port 3000]
 
-Serve one Markdown file or a directory of Markdown files as mobile-friendly HTML.
+Serve one Markdown file or a directory of Markdown files as mobile-friendly HTML, with server-side PDF export.
 
 Flags:
   --host <host>   Bind host. Default: 0.0.0.0
   --port <port>   Bind port. Default: 3000
   --help          Show this help
+
+PDF export:
+  Append ?pdf=1 to a rendered Markdown page.
 `;
 
 main().catch(handleFatalError);
@@ -688,7 +866,9 @@ async function handleRequest(request, appConfig) {
  */
 async function handleDirectoryRequest(request, appConfig) {
   const method = request.method.toUpperCase();
-  const pathname = new URL(request.url).pathname;
+  const requestUrl = new URL(request.url);
+  const pathname = requestUrl.pathname;
+  const isPdf = isPdfExportRequested(requestUrl);
 
   if (pathname === "/") {
     const files = await listMarkdownFiles(appConfig.rootPath);
@@ -710,6 +890,7 @@ async function handleDirectoryRequest(request, appConfig) {
       rootPath: appConfig.rootPath,
       routePath: pathname.slice("/view/".length),
       activeView: "rendered",
+      isPdf,
     });
   }
 
@@ -719,6 +900,7 @@ async function handleDirectoryRequest(request, appConfig) {
       rootPath: appConfig.rootPath,
       routePath: pathname.slice("/raw/".length),
       activeView: "raw",
+      isPdf,
     });
   }
 
@@ -756,17 +938,21 @@ async function handleDirectoryRequest(request, appConfig) {
  */
 async function handleFileRequest(request, appConfig) {
   const method = request.method.toUpperCase();
-  const pathname = new URL(request.url).pathname;
+  const requestUrl = new URL(request.url);
+  const pathname = requestUrl.pathname;
+  const isPdf = isPdfExportRequested(requestUrl);
 
   if (pathname === "/" || pathname === "") {
     return await renderFilePageResponse({
       method,
       filePath: appConfig.filePath,
       relativePath: appConfig.relativePath,
+      rootPath: appConfig.rootPath,
       renderedHref: "/",
       rawHref: "/raw",
       backHref: "/",
       activeView: "rendered",
+      isPdf,
     });
   }
 
@@ -775,10 +961,12 @@ async function handleFileRequest(request, appConfig) {
       method,
       filePath: appConfig.filePath,
       relativePath: appConfig.relativePath,
+      rootPath: appConfig.rootPath,
       renderedHref: "/",
       rawHref: "/raw",
       backHref: "/",
       activeView: "raw",
+      isPdf,
     });
   }
 
@@ -791,7 +979,7 @@ async function handleFileRequest(request, appConfig) {
 }
 
 /**
- * @param {{ method: string; rootPath: string; routePath: string; activeView: "rendered" | "raw" }} input
+ * @param {{ method: string; rootPath: string; routePath: string; activeView: "rendered" | "raw"; isPdf: boolean }} input
  * @returns {Promise<Response>}
  */
 async function renderDirectoryFileRoute(input) {
@@ -837,20 +1025,33 @@ async function renderDirectoryFileRoute(input) {
     method: input.method,
     filePath: resolved.filePath,
     relativePath: resolved.relativePath,
+    rootPath: input.rootPath,
     renderedHref: `/view/${encodeRoutePath(resolved.relativePath)}`,
     rawHref: `/raw/${encodeRoutePath(resolved.relativePath)}`,
     backHref: "/",
     activeView: input.activeView,
+    isPdf: input.isPdf,
   });
 }
 
 /**
- * @param {{ method: string; filePath: string; relativePath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw" }} input
+ * @param {{ method: string; filePath: string; relativePath: string; rootPath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw"; isPdf: boolean }} input
  * @returns {Promise<Response>}
  */
 async function renderFilePageResponse(input) {
   const markdown = await Bun.file(input.filePath).text();
   const title = toFileTitle(input.relativePath);
+
+  if (input.isPdf) {
+    return await renderPdfResponse({
+      method: input.method,
+      markdown,
+      title,
+      relativePath: input.relativePath,
+      rootPath: input.rootPath,
+      sourcePath: input.filePath,
+    });
+  }
 
   if (input.activeView === "raw") {
     return htmlResponse(renderMarkdownPage({
@@ -858,9 +1059,11 @@ async function renderFilePageResponse(input) {
       relativePath: input.relativePath,
       renderedHref: input.renderedHref,
       rawHref: input.rawHref,
+      pdfHref: null,
       backHref: input.backHref,
       activeView: input.activeView,
       bodyHtml: `<section class="raw-body"><pre class="raw-block"><code>${escapeHtml(markdown)}</code></pre></section>`,
+      hasMermaid: false,
     }), 200, input.method);
   }
 
@@ -871,6 +1074,7 @@ async function renderFilePageResponse(input) {
     relativePath: input.relativePath,
     renderedHref: input.renderedHref,
     rawHref: input.rawHref,
+    pdfHref: appendQueryParam(input.renderedHref, "pdf", "1"),
     backHref: input.backHref,
     activeView: input.activeView,
     bodyHtml: `<article class="markdown-body">${renderedHtml}</article>`,
@@ -975,6 +1179,7 @@ function renderIndexPage(rootPath, files) {
     backHref: "/",
     renderedHref: "/",
     rawHref: null,
+    pdfHref: null,
     activeView: "index",
   });
 
@@ -1021,7 +1226,7 @@ function renderFileRow(file) {
 }
 
 /**
- * @param {{ title: string; relativePath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string; hasMermaid?: boolean }} input
+ * @param {{ title: string; relativePath: string; renderedHref: string; rawHref: string; pdfHref: string | null; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string; hasMermaid?: boolean }} input
  * @returns {string}
  */
 function renderMarkdownPage(input) {
@@ -1031,6 +1236,7 @@ function renderMarkdownPage(input) {
       backHref: input.backHref,
       renderedHref: input.renderedHref,
       rawHref: input.rawHref,
+      pdfHref: input.pdfHref,
       activeView: input.activeView,
     }),
     contentHtml: `
@@ -1056,6 +1262,7 @@ function renderErrorPage(input) {
       backHref: input.backHref,
       renderedHref: input.backHref ?? "/",
       rawHref: null,
+      pdfHref: null,
       activeView: "error",
     }),
     contentHtml: `
@@ -1078,19 +1285,8 @@ function renderErrorPage(input) {
  */
 function renderDocument(input) {
   const mermaidScript = input.hasMermaid
-    ? `<script type="module">
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-  mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains("") ? "default" : undefined });
-  // Re-init on dark/light mode toggle
-  const mq = window.matchMedia("(prefers-color-scheme: dark)");
-  const rerender = () => {
-    mermaid.initialize({ startOnLoad: false, theme: mq.matches ? "dark" : "default" });
-    mermaid.run();
-  };
-  mq.addEventListener("change", rerender);
-</script>`
+    ? renderMermaidScript()
     : "";
-
   const langScripts = HIGHLIGHT_LANG_PACKS.map((url) => `<script src="${url}"></script>`).join("\n    ");
 
   return `<!doctype html>
@@ -1117,7 +1313,7 @@ function renderDocument(input) {
 }
 
 /**
- * @param {{ backHref: string | null; renderedHref: string; rawHref: string | null; activeView: "index" | "rendered" | "raw" | "error" }} input
+ * @param {{ backHref: string | null; renderedHref: string; rawHref: string | null; pdfHref: string | null; activeView: "index" | "rendered" | "raw" | "error" }} input
  * @returns {string}
  */
 function renderNav(input) {
@@ -1133,12 +1329,623 @@ function renderNav(input) {
     actions.push(`<a class="pill ${input.activeView === "raw" ? "active" : ""}" href="${input.rawHref}">Raw</a>`);
   }
 
+  if (input.pdfHref) {
+    actions.push(`<a class="pill" href="${input.pdfHref}" target="_blank" rel="noopener noreferrer">PDF</a>`);
+  }
+
   return `
     <div class="nav-row">
       <a class="brand" href="/">mdview</a>
       <div class="nav-actions">${actions.join("")}</div>
     </div>
   `;
+}
+
+/**
+ * @param {string} href
+ * @param {string} name
+ * @param {string} value
+ * @returns {string}
+ */
+function appendQueryParam(href, name, value) {
+  const url = new URL(href, "http://localhost");
+  url.searchParams.set(name, value);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+/**
+ * @returns {string}
+ */
+function renderMermaidScript() {
+  return `<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: isDarkMode ? "dark" : "default" });
+</script>`;
+}
+
+/**
+ * @param {URL} requestUrl
+ * @returns {boolean}
+ */
+function isPdfExportRequested(requestUrl) {
+  return requestUrl.searchParams.get("pdf") === "1" || requestUrl.searchParams.get("print") === "1";
+}
+
+/**
+ * @param {{ method: string; markdown: string; title: string; relativePath: string; rootPath: string; sourcePath: string }} input
+ * @returns {Promise<Response>}
+ */
+async function renderPdfResponse(input) {
+  const pdfBuffer = await createPdfBuffer({
+    markdown: input.markdown,
+    title: input.title,
+    rootPath: input.rootPath,
+    sourcePath: input.sourcePath,
+  });
+
+  return new Response(input.method === "HEAD" ? null : pdfBuffer, {
+    status: 200,
+    headers: {
+      "content-disposition": `inline; filename="${buildPdfFilename(input.relativePath)}"`,
+      "content-type": "application/pdf",
+    },
+  });
+}
+
+/**
+ * @param {{ markdown: string; title: string; rootPath: string; sourcePath: string }} input
+ * @returns {Promise<Buffer>}
+ */
+async function createPdfBuffer(input) {
+  const document = new PDFDocument({
+    info: {
+      Author: "mdview",
+      Title: input.title,
+    },
+    margin: 54,
+    size: "A4",
+  });
+
+  const bufferPromise = collectPdfBuffer(document);
+  await renderMarkdownToPdf(document, input.markdown, {
+    indent: 0,
+    rootPath: input.rootPath,
+    sourcePath: input.sourcePath,
+  });
+  document.end();
+  return await bufferPromise;
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @returns {Promise<Buffer>}
+ */
+function collectPdfBuffer(document) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+
+    document.on("data", (chunk) => {
+      chunks.push(Buffer.from(chunk));
+    });
+
+    document.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+
+    document.on("error", reject);
+  });
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {string} markdown
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderMarkdownToPdf(document, markdown, context) {
+  const tokens = /** @type {PdfToken[]} */ (marked.lexer(markdown, { gfm: true, breaks: false }));
+
+  document.fillColor("#000000");
+  document.font("Helvetica").fontSize(11.5);
+  await renderPdfBlocks(document, tokens, context);
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken[]} tokens
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfBlocks(document, tokens, context) {
+  for (const token of stripSpaceTokens(tokens)) {
+    await renderPdfBlock(document, token, context);
+  }
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfBlock(document, token, context) {
+  switch (token.type) {
+    case "heading":
+      await renderPdfHeading(document, token, context);
+      return;
+    case "paragraph":
+      await renderPdfParagraph(document, token, context);
+      return;
+    case "list":
+      await renderPdfList(document, token, context);
+      return;
+    case "blockquote":
+      await renderPdfBlockquote(document, token, context);
+      return;
+    case "code":
+      await renderPdfCode(document, token, context);
+      return;
+    case "table":
+      await renderPdfTable(document, token, context);
+      return;
+    case "hr":
+      renderPdfHr(document, context);
+      return;
+    case "html":
+      await renderPdfHtml(document, token, context);
+      return;
+    default:
+      return;
+  }
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfHeading(document, token, context) {
+  const text = extractInlineText(token.tokens ?? []).trim() || (token.text ?? "").trim();
+  if (!text) return;
+
+  const depth = Math.min(Math.max(Number(token.depth ?? 1), 1), 6);
+  const size = [20, 16, 14, 12.5, 11.5, 11.5][depth - 1];
+
+  if (document.y > document.page.margins.top) {
+    document.moveDown(depth === 1 ? 0.45 : 0.35);
+  }
+
+  renderPdfTextBlock(document, text, context, {
+    font: "Helvetica-Bold",
+    size,
+    lineGap: 2,
+    moveDown: depth === 1 ? 0.35 : 0.25,
+  });
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfParagraph(document, token, context) {
+  const paragraphTokens = stripSpaceTokens(token.tokens ?? []);
+  if (paragraphTokens.length === 0) return;
+
+  if (isStandaloneImageParagraph(paragraphTokens)) {
+    await renderPdfImage(document, paragraphTokens[0], context);
+    return;
+  }
+
+  const text = extractInlineText(token.tokens ?? []).trim();
+  if (!text) return;
+
+  renderPdfTextBlock(document, text, context, {
+    font: "Helvetica",
+    size: 11.5,
+    lineGap: 2,
+    moveDown: 0.25,
+  });
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfList(document, token, context) {
+  const items = token.items ?? [];
+  if (items.length === 0) return;
+
+  let counter = Number.parseInt(String(token.start ?? 1), 10);
+  if (Number.isNaN(counter) || counter < 1) {
+    counter = 1;
+  }
+
+  for (const item of items) {
+    const itemTokens = stripSpaceTokens(item.tokens ?? []);
+    if (itemTokens.length === 0) {
+      if (token.ordered) counter += 1;
+      continue;
+    }
+
+    const bullet = token.ordered
+      ? `${counter}.`
+      : item.task
+        ? item.checked
+          ? "[x]"
+          : "[ ]"
+        : "•";
+
+    const { inlineTokens, blockTokens } = splitInlineAndBlockTokens(itemTokens);
+    const inlineText = extractInlineText(inlineTokens).trim();
+    renderPdfTextBlock(document, inlineText ? `${bullet} ${inlineText}` : bullet, context, {
+      font: "Helvetica",
+      size: 11.5,
+      lineGap: 2,
+      moveDown: 0.1,
+    });
+
+    if (blockTokens.length > 0) {
+      await renderPdfBlocks(document, blockTokens, { indent: context.indent + 18 });
+    }
+
+    document.moveDown(0.15);
+    if (token.ordered) counter += 1;
+  }
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfBlockquote(document, token, context) {
+  const quoteTokens = stripSpaceTokens(token.tokens ?? []);
+  if (quoteTokens.length === 0) return;
+
+  document.moveDown(0.1);
+  await renderPdfBlocks(document, quoteTokens, { indent: context.indent + 18 });
+  document.moveDown(0.1);
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfCode(document, token, context) {
+  const code = (token.text ?? token.raw ?? "").replace(/\n+$/, "");
+  if (!code.trim()) return;
+
+  renderPdfTextBlock(document, code, context, {
+    font: "Courier",
+    size: 10,
+    lineGap: 2,
+    moveDown: 0.3,
+  });
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfTable(document, token, context) {
+  const rows = [];
+  if (token.header) rows.push(token.header);
+  if (token.rows) rows.push(...token.rows);
+
+  const lines = rows
+    .map((row) => row.map((cell) => extractInlineText(cell.tokens ?? []).trim()).join(" | "))
+    .filter((line) => line.trim());
+
+  if (lines.length === 0) return;
+
+  renderPdfTextBlock(document, lines.join("\n"), context, {
+    font: "Courier",
+    size: 10,
+    lineGap: 2,
+    moveDown: 0.2,
+  });
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfRenderContext} context
+ */
+function renderPdfHr(document, context) {
+  const { x, width } = getPdfBlockBounds(document, context.indent);
+
+  ensurePdfSpace(document, 12);
+  const lineY = document.y + 5;
+
+  document.save();
+  document.strokeColor("#c7c7c7").lineWidth(0.75);
+  document.moveTo(x, lineY).lineTo(x + width, lineY).stroke();
+  document.restore();
+  document.y = lineY + 7;
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfHtml(document, token, context) {
+  const text = stripHtml(token.raw ?? token.text ?? "");
+  if (!text.trim()) return;
+
+  renderPdfTextBlock(document, text, context, {
+    font: "Helvetica",
+    size: 11.5,
+    lineGap: 2,
+    moveDown: 0.2,
+  });
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {PdfRenderContext} context
+ * @returns {Promise<void>}
+ */
+async function renderPdfImage(document, token, context) {
+  const imageSource = await resolvePdfImageSource(context.rootPath, context.sourcePath, token.href ?? "");
+  if (!imageSource) {
+    const fallbackText = (token.text ?? token.href ?? "").trim();
+    if (fallbackText) {
+      renderPdfTextBlock(document, `[image: ${fallbackText}]`, context, {
+        font: "Helvetica-Oblique",
+        size: 10.5,
+        lineGap: 2,
+        moveDown: 0.25,
+      });
+    }
+    return;
+  }
+
+  let image;
+  try {
+    image = document.openImage(imageSource);
+  } catch {
+    const fallbackText = (token.text ?? token.href ?? "").trim();
+    if (fallbackText) {
+      renderPdfTextBlock(document, `[image: ${fallbackText}]`, context, {
+        font: "Helvetica-Oblique",
+        size: 10.5,
+        lineGap: 2,
+        moveDown: 0.25,
+      });
+    }
+    return;
+  }
+
+  const bounds = getPdfBlockBounds(document, context.indent);
+  const maxHeight = document.page.height - document.page.margins.top - document.page.margins.bottom;
+  const scale = Math.min(bounds.width / image.width, maxHeight / image.height, 1);
+  const imageWidth = image.width * scale;
+  const imageHeight = image.height * scale;
+
+  ensurePdfSpace(document, imageHeight + 12);
+
+  const x = bounds.x + Math.max(0, (bounds.width - imageWidth) / 2);
+  const y = document.y;
+  document.image(imageSource, x, y, { width: imageWidth });
+  document.y = y + imageHeight + 8;
+}
+
+/**
+ * @param {string} rootPath
+ * @param {string} sourcePath
+ * @param {string} href
+ * @returns {Promise<string | null>}
+ */
+async function resolvePdfImageSource(rootPath, sourcePath, href) {
+  const cleanedHref = stripImageHref(href);
+  if (!cleanedHref) return null;
+  if (cleanedHref.startsWith("//")) return null;
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(cleanedHref)) return null;
+
+  const decodedHref = decodeRoutePath(cleanedHref) ?? cleanedHref;
+  const resolvedPath = decodedHref.startsWith("/")
+    ? path.join(rootPath, decodedHref)
+    : path.resolve(path.dirname(sourcePath), decodedHref);
+
+  if (!isWithinPath(rootPath, resolvedPath)) return null;
+
+  const fileStat = await getStat(resolvedPath);
+  if (!fileStat || !fileStat.isFile()) return null;
+
+  return resolvedPath;
+}
+
+/**
+ * @param {string} href
+ * @returns {string}
+ */
+function stripImageHref(href) {
+  return href.trim().split("#")[0].split("?")[0].trim();
+}
+
+/**
+ * @param {PdfToken[]} tokens
+ * @returns {boolean}
+ */
+function isStandaloneImageParagraph(tokens) {
+  return tokens.length === 1 && tokens[0].type === "image";
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {string} text
+ * @param {PdfRenderContext} context
+ * @param {{ font?: string; size?: number; lineGap?: number; moveDown?: number }} [options]
+ */
+function renderPdfTextBlock(document, text, context, options = {}) {
+  const { x, width } = getPdfBlockBounds(document, context.indent);
+  const font = options.font ?? "Helvetica";
+  const size = options.size ?? 11.5;
+  const lineGap = options.lineGap ?? 2;
+  const moveDown = options.moveDown ?? 0.25;
+
+  document.fillColor("#000000");
+  document.font(font).fontSize(size);
+  ensurePdfSpace(document, document.heightOfString(text, { width, lineGap }) + 8);
+  document.text(text, x, document.y, { width, lineGap });
+
+  if (moveDown > 0) {
+    document.moveDown(moveDown);
+  }
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {number} requiredHeight
+ */
+function ensurePdfSpace(document, requiredHeight) {
+  const remainingHeight = document.page.height - document.page.margins.bottom - document.y;
+  if (remainingHeight >= requiredHeight) return;
+
+  document.addPage();
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {number} indent
+ * @returns {{ x: number; width: number }}
+ */
+function getPdfBlockBounds(document, indent) {
+  const contentWidth = document.page.width - document.page.margins.left - document.page.margins.right;
+  const effectiveIndent = Math.min(Math.max(indent, 0), Math.max(0, contentWidth - 72));
+  const x = document.page.margins.left + effectiveIndent;
+  const width = Math.max(72, contentWidth - effectiveIndent);
+
+  return {
+    x,
+    width,
+  };
+}
+
+/**
+ * @param {PdfToken[]} tokens
+ * @returns {string}
+ */
+function extractInlineText(tokens) {
+  return tokens.map((token) => extractTokenText(token)).join("");
+}
+
+/**
+ * @param {PdfToken} token
+ * @returns {string}
+ */
+function extractTokenText(token) {
+  if (token.type === "text" || token.type === "escape" || token.type === "codespan") {
+    return token.text ?? token.raw ?? "";
+  }
+
+  if (token.type === "br") {
+    return "\n";
+  }
+
+  if (token.type === "image") {
+    return token.text ?? "";
+  }
+
+  if (token.type === "link") {
+    const linkText = extractInlineText(token.tokens ?? []).trim() || (token.text ?? "");
+    return token.href ? `${linkText} (${token.href})` : linkText;
+  }
+
+  if (token.type === "html") {
+    return stripHtml(token.raw ?? token.text ?? "");
+  }
+
+  if (token.tokens) {
+    return extractInlineText(token.tokens);
+  }
+
+  return token.text ?? token.raw ?? "";
+}
+
+/**
+ * @param {PdfToken[]} tokens
+ * @returns {PdfToken[]}
+ */
+function stripSpaceTokens(tokens) {
+  return tokens.filter((token) => token.type !== "space");
+}
+
+/**
+ * @param {PdfToken[]} tokens
+ * @returns {{ inlineTokens: PdfToken[]; blockTokens: PdfToken[] }}
+ */
+function splitInlineAndBlockTokens(tokens) {
+  const inlineTokens = [];
+  const blockTokens = [];
+  let blockStarted = false;
+
+  for (const token of tokens) {
+    if (!blockStarted && isInlinePdfToken(token)) {
+      inlineTokens.push(token);
+      continue;
+    }
+
+    blockStarted = true;
+    blockTokens.push(token);
+  }
+
+  return {
+    inlineTokens,
+    blockTokens,
+  };
+}
+
+/**
+ * @param {PdfToken} token
+ * @returns {boolean}
+ */
+function isInlinePdfToken(token) {
+  return token.type === "text"
+    || token.type === "escape"
+    || token.type === "codespan"
+    || token.type === "strong"
+    || token.type === "em"
+    || token.type === "link"
+    || token.type === "image"
+    || token.type === "br"
+    || token.type === "del"
+    || token.type === "html";
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function stripHtml(value) {
+  return value.replace(/<[^>]*>/g, "");
+}
+
+/**
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function buildPdfFilename(relativePath) {
+  const title = toFileTitle(relativePath)
+    .normalize("NFKD")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${title || "document"}.pdf`;
 }
 
 /**
