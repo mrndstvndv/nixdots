@@ -1507,7 +1507,8 @@ async function renderPdfBlock(document, token, context) {
  * @returns {Promise<void>}
  */
 async function renderPdfHeading(document, token, context) {
-  const text = extractInlineText(token.tokens ?? []).trim() || (token.text ?? "").trim();
+  const headingTokens = token.tokens ?? [];
+  const text = extractInlineText(headingTokens).trim() || (token.text ?? "").trim();
   if (!text) return;
 
   const depth = Math.min(Math.max(Number(token.depth ?? 1), 1), 6);
@@ -1517,12 +1518,12 @@ async function renderPdfHeading(document, token, context) {
     document.moveDown(depth === 1 ? 0.45 : 0.35);
   }
 
-  renderPdfTextBlock(document, text, context, {
-    font: "Helvetica-Bold",
-    size,
-    lineGap: 2,
-    moveDown: depth === 1 ? 0.35 : 0.25,
-  });
+  // Headings are always bold
+  const { x, width } = getPdfBlockBounds(document, context.indent);
+  document.fillColor("#000000").font("Helvetica-Bold").fontSize(size);
+  ensurePdfSpace(document, document.heightOfString(text, { width, lineGap: 2 }) + 8);
+  document.text(text, x, document.y, { width, lineGap: 2 });
+  document.moveDown(depth === 1 ? 0.35 : 0.25);
 }
 
 /**
@@ -1540,15 +1541,146 @@ async function renderPdfParagraph(document, token, context) {
     return;
   }
 
-  const text = extractInlineText(token.tokens ?? []).trim();
-  if (!text) return;
+  const { x, width } = getPdfBlockBounds(document, context.indent);
+  document.moveDown(0.25);
+  renderPdfInlineTokens(document, paragraphTokens, x, width, context);
+  document.moveDown(0.25);
+}
 
-  renderPdfTextBlock(document, text, context, {
-    font: "Helvetica",
-    size: 11.5,
-    lineGap: 2,
-    moveDown: 0.25,
-  });
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken[]} tokens
+ * @param {number} x
+ * @param {number} width
+ * @param {PdfRenderContext} context
+ * @param {{ bold?: boolean; italic?: boolean }} [style]
+ */
+function renderPdfInlineTokens(document, tokens, x, width, context, style = {}) {
+  const baseSize = 11.5;
+  const lineGap = 2;
+
+  for (const token of tokens) {
+    renderPdfInlineToken(document, token, x, width, context, { ...style, size: baseSize, lineGap });
+  }
+}
+
+/**
+ * @param {InstanceType<typeof PDFDocument>} document
+ * @param {PdfToken} token
+ * @param {number} x
+ * @param {number} width
+ * @param {PdfRenderContext} context
+ * @param {{ bold?: boolean; italic?: boolean; size?: number; lineGap?: number }} style
+ */
+function renderPdfInlineToken(document, token, x, width, context, style) {
+  const size = style.size ?? 11.5;
+  const lineGap = style.lineGap ?? 2;
+
+  switch (token.type) {
+    case "text":
+    case "escape": {
+      const text = token.text ?? token.raw ?? "";
+      if (!text) return;
+      const font = getPdfFont(style.bold, style.italic);
+      document.fillColor("#000000").font(font).fontSize(size);
+      ensurePdfSpace(document, document.heightOfString(text, { width, lineGap }) + 4);
+      document.text(text, x, document.y, { width, lineGap, continued: false });
+      return;
+    }
+
+    case "codespan": {
+      const text = token.text ?? token.raw ?? "";
+      if (!text) return;
+      document.fillColor("#000000").font("Courier").fontSize(size * 0.92);
+      ensurePdfSpace(document, document.heightOfString(text, { width, lineGap }) + 4);
+      document.text(text, x, document.y, { width, lineGap, continued: false });
+      return;
+    }
+
+    case "strong": {
+      renderPdfInlineTokens(document, token.tokens ?? [], x, width, context, { ...style, bold: true });
+      return;
+    }
+
+    case "em": {
+      renderPdfInlineTokens(document, token.tokens ?? [], x, width, context, { ...style, italic: true });
+      return;
+    }
+
+    case "del": {
+      renderPdfInlineTokens(document, token.tokens ?? [], x, width, context, style);
+      return;
+    }
+
+    case "link": {
+      const linkTokens = token.tokens ?? [];
+      if (linkTokens.length > 0) {
+        renderPdfInlineTokens(document, linkTokens, x, width, context, { ...style, italic: true });
+      } else {
+        const text = token.text ?? "";
+        if (text) {
+          document.fillColor("#000000").font("Helvetica-Oblique").fontSize(size);
+          ensurePdfSpace(document, document.heightOfString(text, { width, lineGap }) + 4);
+          document.text(text, x, document.y, { width, lineGap, continued: false });
+        }
+      }
+      return;
+    }
+
+    case "br": {
+      document.moveDown(0.5);
+      return;
+    }
+
+    case "image": {
+      // Inline images in paragraphs - just show alt text
+      const altText = token.text ?? "";
+      if (altText) {
+        document.fillColor("#000000").font("Helvetica-Oblique").fontSize(size);
+        ensurePdfSpace(document, document.heightOfString(altText, { width, lineGap }) + 4);
+        document.text(altText, x, document.y, { width, lineGap, continued: false });
+      }
+      return;
+    }
+
+    case "html": {
+      const text = stripHtml(token.raw ?? token.text ?? "");
+      if (!text.trim()) return;
+      const font = getPdfFont(style.bold, style.italic);
+      document.fillColor("#000000").font(font).fontSize(size);
+      ensurePdfSpace(document, document.heightOfString(text, { width, lineGap }) + 4);
+      document.text(text, x, document.y, { width, lineGap, continued: false });
+      return;
+    }
+
+    default: {
+      // Fallback for any other token types
+      if (token.tokens && token.tokens.length > 0) {
+        renderPdfInlineTokens(document, token.tokens, x, width, context, style);
+      } else {
+        const text = token.text ?? token.raw ?? "";
+        if (text) {
+          const font = getPdfFont(style.bold, style.italic);
+          document.fillColor("#000000").font(font).fontSize(size);
+          ensurePdfSpace(document, document.heightOfString(text, { width, lineGap }) + 4);
+          document.text(text, x, document.y, { width, lineGap, continued: false });
+        }
+      }
+      return;
+    }
+  }
+}
+
+/**
+ * @param {boolean} [bold]
+ * @param {boolean} [italic]
+ * @returns {string}
+ */
+function getPdfFont(bold, italic) {
+  if (bold && italic) return "Helvetica-BoldOblique";
+  if (bold) return "Helvetica-Bold";
+  if (italic) return "Helvetica-Oblique";
+  return "Helvetica";
 }
 
 /**
@@ -1582,14 +1714,19 @@ async function renderPdfList(document, token, context) {
         : "•";
 
     const { inlineTokens, blockTokens } = splitInlineAndBlockTokens(itemTokens);
-    const inlineText = extractInlineText(inlineTokens).trim();
-    renderPdfTextBlock(document, inlineText ? `${bullet} ${inlineText}` : bullet, context, {
-      font: "Helvetica",
-      size: 11.5,
-      lineGap: 2,
-      moveDown: 0.1,
-    });
-
+    const { x, width } = getPdfBlockBounds(document, context.indent);
+    const bulletText = `${bullet} `;
+    
+    // Render bullet
+    document.fillColor("#000000").font("Helvetica").fontSize(11.5);
+    ensurePdfSpace(document, 20);
+    document.text(bulletText, x, document.y, { width, continued: true, lineGap: 2 });
+    
+    // Render inline content with formatting
+    const afterBulletX = x + document.widthOfString(bulletText);
+    const afterBulletWidth = Math.max(72, width - document.widthOfString(bulletText));
+    renderPdfInlineTokens(document, inlineTokens, afterBulletX, afterBulletWidth, context);
+    
     if (blockTokens.length > 0) {
       await renderPdfBlocks(document, blockTokens, { indent: context.indent + 18 });
     }
