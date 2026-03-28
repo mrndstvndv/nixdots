@@ -25,7 +25,7 @@
 
       # Desktop notification for long-running commands (>1s)
       function notify_long_cmd --on-event fish_postexec
-        if test "$CMD_DURATION" -ge 1000
+        if test "$CMD_DURATION" -ge 10000
           set -l msg (string replace -a '\n' ' ' -- "$argv")
           osc-notify "Fish" "$msg"
         end
