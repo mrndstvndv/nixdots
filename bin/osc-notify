@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# OSC desktop notification (OSC 9 + OSC 777)
+# Matches pi-notify extension behavior exactly
+
+title="${1:-Done}"
+msg="${2:-Task completed}"
+
+# Build OSC 9: ESC ] 9 ; message BEL
+#osc9=$'\x1b]9;'"$msg"$'\x07'
+
+# Build OSC 777: ESC ] 777 ; notify ; title ; message BEL
+osc777=$'\x1b]777;notify;'"$title"';'"$msg"$'\x07'
+
+write_to_tty() {
+    local tty="$1" data="$2"
+    printf '%s' "$data" >> "$tty" 2>/dev/null
+}
+
+# tmux passthrough fallback: DCS Ptmux; ESC ESC ] ... BEL ESC \
+passthrough() {
+    local osc="$1"
+    printf '\x1bPtmux;\x1b\x1b]%s\x07\x1b\\' "$osc"
+}
+
+if [ -n "$TMUX" ]; then
+    # Inside tmux - find client TTYs and write directly
+    sent=false
+    for tty in $(tmux list-clients -F '#{client_tty}' 2>/dev/null | sort -u); do
+        [ -z "$tty" ] && continue
+        #write_to_tty "$tty" "$osc9" && sent=true
+        write_to_tty "$tty" "$osc777" && sent=true
+    done
+
+    # Fallback to passthrough if no client TTY worked
+    if ! $sent; then
+        #passthrough "$osc9"
+        passthrough "$osc777"
+    fi
+else
+    # Direct to TTY, fallback to stdout
+    if write_to_tty "/dev/tty" "$osc777"; then
+        :
+        #write_to_tty "/dev/tty" "$osc9"
+    else
+        #printf '%s' "$osc9" "$osc777"
+        printf '%s' "$osc777"
+    fi
+fi
