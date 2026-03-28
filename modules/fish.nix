@@ -23,6 +23,14 @@
 
       set fish_greeting ""
 
+      # Desktop notification for long-running commands (>1s)
+      function notify_long_cmd --on-event fish_postexec
+        if test "$CMD_DURATION" -ge 1000
+          set -l msg (string replace -a '\n' ' ' -- "$argv")
+          osc-notify "Fish" "$msg"
+        end
+      end
+
       # Use external storage on macOS if available
       if test (uname) = Darwin; and test -d "/Volumes/realme"
         set --export UV_CACHE_DIR "/Volumes/realme/.cache/uv"
