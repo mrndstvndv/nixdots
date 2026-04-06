@@ -49,6 +49,7 @@
       "mpv"
       "codex-app"
       "obs"
+      "android-studio"
     ];
 
     brews = [
