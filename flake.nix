@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    neru.url = "github:y3owk1n/neru";
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager";
@@ -47,7 +48,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, my-neovim, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, my-neovim, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
    let
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
@@ -90,6 +91,9 @@
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
+
+      # Required for launchd user agents (like neru)
+      system.primaryUser = "steven";
     };
   in
   {
@@ -100,6 +104,9 @@
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
+        neru.darwinModules.default
+        { nixpkgs.overlays = [ neru.overlays.default ]; }
+        { services.neru.enable = true; }
         configuration 
       ];
     };
