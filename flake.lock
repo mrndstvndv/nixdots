@@ -183,6 +183,24 @@
         "type": "github"
       }
     },
+    "neru": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1775377569,
+        "narHash": "sha256-9ThKjA6UmterreroLRhst3R+z9MSGheIomfeD5tlO8g=",
+        "owner": "y3owk1n",
+        "repo": "neru",
+        "rev": "83dc84dd84be35cbb11e45d84e216897bc823733",
+        "type": "github"
+      },
+      "original": {
+        "owner": "y3owk1n",
+        "repo": "neru",
+        "type": "github"
+      }
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -323,6 +341,23 @@
     },
     "nixpkgs_2": {
       "locked": {
+        "lastModified": 1761874065,
+        "narHash": "sha256-NmiCO/7hKv3TVIXXtEAkpGHiJzQc/5z8PT8tO+SKPZA=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b976292fb39a449bcf410219e4cf0aa05a8b4d04",
+        "type": "github"
+      },
+      "original": {
+        "narHash": "sha256-NmiCO/7hKv3TVIXXtEAkpGHiJzQc/5z8PT8tO+SKPZA=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b976292fb39a449bcf410219e4cf0aa05a8b4d04",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
         "lastModified": 1775403759,
         "narHash": "sha256-cGyKiTspHEUx3QwAnV3RfyT+VOXhHLs+NEr17HU34Wo=",
         "owner": "NixOS",
@@ -421,10 +456,11 @@
         "homebrew-core": "homebrew-core",
         "homebrew-smctemp": "homebrew-smctemp",
         "my-neovim": "my-neovim",
+        "neru": "neru",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
         "nix-on-droid": "nix-on-droid",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_3",
         "piAgent": "piAgent"
       }
     },
