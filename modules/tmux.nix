@@ -34,13 +34,13 @@ in
 
       set -g status-position ${cfg.statusPosition}
 
-      # Statusbar styling - pure black
-      set -g status-style 'fg=default,bg=#000000'
-      set -g status-left-style 'fg=default,bg=#000000'
-      set -g status-right-style 'fg=default,bg=#000000'
-      set -g window-status-style 'fg=default,bg=#000000'
-      set -g window-status-current-style 'fg=default,bg=#000000'
-      set -g window-status-last-style 'fg=default,bg=#000000'
+      # Statusbar styling
+      set -g status-style 'fg=default,bg=default'
+      set -g status-left-style 'fg=default,bg=default'
+      set -g status-right-style 'fg=default,bg=default'
+      set -g window-status-style 'fg=default,bg=default'
+      set -g window-status-current-style 'fg=default,bg=default'
+      set -g window-status-last-style 'fg=default,bg=default'
       set -g status-left '#S | '
       set -g status-left-length 20
 
