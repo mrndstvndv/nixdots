@@ -1,4 +1,4 @@
-{ config, pkgs, amp, codex, ... }:
+{ config, pkgs, codex, ... }:
 {
   imports = [ ./bun.nix ];
 
@@ -20,7 +20,6 @@
     pkgs.jq
     pkgs.aria2
     pkgs.unzip
-    (amp.lib.mkAmp pkgs.system pkgs)
 
     # OpenAI Codex CLI from external flake input
     # Use the flake's package matching our system

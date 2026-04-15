@@ -13,4 +13,4 @@ This project uses a simple `scope: description` format (NOT semantic commits).
   - `opencode: add context7`
   - `pkgs: add tailscale`
   - `fish: remove tmux autostart`
-  - `flake: update amp`
+  - `flake: update helium`

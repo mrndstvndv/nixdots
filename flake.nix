@@ -9,8 +9,6 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
-    amp.url = "github:mrndstvndv/amp-flake";
-    amp.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     helium = {
       url = "github:schembriaiden/helium-browser-nix-flake";
@@ -48,7 +46,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, my-neovim, amp, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, my-neovim, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
    let
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
@@ -58,7 +56,7 @@
            home = "/Users/steven";
            shell = pkgs.fish;
          };
-         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim amp helium codex; inherit piAgent; };
+         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim helium codex; inherit piAgent; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [
@@ -119,7 +117,7 @@
       modules = [
         # Inject flake input my-neovim into _module.args, so all
         # nix-on-droid modules (including HM) can see it.
-        { _module.args.my-neovim = my-neovim; _module.args.amp = amp; _module.args.piAgent = piAgent; }
+        { _module.args.my-neovim = my-neovim; _module.args.piAgent = piAgent; }
         ./nix-on-droid/system.nix
       ];
     };
@@ -127,7 +125,7 @@
     # Standalone Home Manager for Alpine chroot (Termux)
     homeConfigurations = nixpkgs.lib.mapAttrs (_: system: home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages.${system};
-      extraSpecialArgs = { inherit my-neovim amp codex piAgent; };
+      extraSpecialArgs = { inherit my-neovim codex piAgent; };
       modules = [
         ./alpine/home.nix
         {
