@@ -10,10 +10,6 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     my-neovim.url = "github:crimera/nvim.config";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
-    helium = {
-      url = "github:schembriaiden/helium-browser-nix-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     homebrew-core = {
       url = "github:homebrew/homebrew-core";
       flake = false;
@@ -46,7 +42,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, my-neovim, helium, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, my-neovim, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
    let
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
@@ -56,7 +52,7 @@
            home = "/Users/steven";
            shell = pkgs.fish;
          };
-         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim helium codex; inherit piAgent; };
+         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim codex; inherit piAgent; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [
