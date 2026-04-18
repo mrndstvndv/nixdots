@@ -54,8 +54,8 @@ const HIGHLIGHT_LANG_PACKS = [
 const GEIST_SANS_URL = "https://cdn.jsdelivr.net/fontsource/fonts/geist:vf@latest/latin-wght-normal.woff2";
 const GEIST_MONO_URL = "https://cdn.jsdelivr.net/fontsource/fonts/geist-mono:vf@latest/latin-wght-normal.woff2";
 const PDF_PAGE_SIZE = "A4";
-const PDF_MARGIN_INCHES = "0.75in";
-const PDF_MARGIN_POINTS = 54;
+const PDF_MARGIN_INCHES = "0.5in";
+const PDF_MARGIN_POINTS = 36;
 const PDF_BROWSER_TIMEOUT_MS = 15_000;
 const PDF_BROWSER_COMMAND_CANDIDATES = [
   "google-chrome",
