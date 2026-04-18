@@ -53,6 +53,44 @@ const HIGHLIGHT_LANG_PACKS = [
 
 const GEIST_SANS_URL = "https://cdn.jsdelivr.net/fontsource/fonts/geist:vf@latest/latin-wght-normal.woff2";
 const GEIST_MONO_URL = "https://cdn.jsdelivr.net/fontsource/fonts/geist-mono:vf@latest/latin-wght-normal.woff2";
+const PDF_PAGE_SIZE = "A4";
+const PDF_MARGIN_INCHES = "0.75in";
+const PDF_MARGIN_POINTS = 54;
+const PDF_BROWSER_TIMEOUT_MS = 15_000;
+const PDF_BROWSER_COMMAND_CANDIDATES = [
+  "google-chrome",
+  "google-chrome-stable",
+  "chromium",
+  "chromium-browser",
+  "brave-browser",
+  "microsoft-edge",
+];
+const PDF_BROWSER_PATH_CANDIDATES = {
+  darwin: [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+  ],
+  linux: [
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/brave-browser",
+    "/usr/bin/microsoft-edge",
+    "/snap/bin/chromium",
+  ],
+  win32: [
+    "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
+    "C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe",
+  ],
+};
+const PDF_BROWSER_FALLBACK_WARNINGS = new Set();
+let cachedPdfBrowserExecutable;
+let playwrightChromiumPromise = null;
 
 const STYLES = `
 /* --- Geist Fonts (Vercel) --- */
@@ -504,7 +542,8 @@ img {
 
 const PRINT_STYLES = `
 @page {
-  margin: 0.75in;
+  size: ${PDF_PAGE_SIZE};
+  margin: ${PDF_MARGIN_INCHES};
 }
 
 :root {
@@ -538,20 +577,52 @@ img {
   height: auto;
 }
 
-.print-shell {
-  width: 100%;
+.page {
+  min-height: 0;
+  padding: 0;
 }
 
-.markdown-body {
+.top-nav {
+  display: none !important;
+}
+
+.shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-header {
+  display: none;
+}
+
+.surface {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.markdown-body,
+.raw-body,
+.empty-state,
+.error-body {
   max-width: none;
   padding: 0;
 }
 
-.markdown-body > :first-child {
+.markdown-body > :first-child,
+.raw-body > :first-child,
+.empty-state > :first-child,
+.error-body > :first-child {
   margin-top: 0;
 }
 
-.markdown-body > :last-child {
+.markdown-body > :last-child,
+.raw-body > :last-child,
+.empty-state > :last-child,
+.error-body > :last-child {
   margin-bottom: 0;
 }
 
@@ -591,7 +662,8 @@ img {
   word-break: break-word;
 }
 
-.markdown-body pre {
+.markdown-body pre,
+.raw-block {
   overflow: visible;
   white-space: pre-wrap;
   word-break: break-word;
@@ -633,9 +705,15 @@ img {
 }
 
 .markdown-body table {
+  display: table !important;
+  overflow: visible !important;
   width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
+}
+
+.markdown-body thead {
+  display: table-header-group;
 }
 
 .markdown-body th,
@@ -650,6 +728,7 @@ img {
   background: #fafafa;
 }
 
+.markdown-body tr,
 .markdown-body img,
 .markdown-body .mermaid {
   break-inside: avoid;
@@ -663,6 +742,7 @@ img {
 .markdown-body .mermaid {
   margin: 1rem 0;
   text-align: center;
+  overflow: visible;
 }
 
 .markdown-body .mermaid svg {
@@ -681,7 +761,9 @@ Flags:
   --help          Show this help
 
 PDF export:
-  Append ?pdf=1 to a rendered Markdown page.
+  Append ?pdf=1 to a rendered Markdown page for server-side export.
+  Append ?print=1 or use the Print action to let the client browser print/save as PDF.
+  Server-side export uses a local Chromium-based browser when available, falls back to PDFKit.
 `;
 
 main().catch(handleFatalError);
@@ -887,6 +969,7 @@ async function handleDirectoryRequest(request, appConfig) {
   if (pathname.startsWith("/view/")) {
     return await renderDirectoryFileRoute({
       method,
+      requestUrl,
       rootPath: appConfig.rootPath,
       routePath: pathname.slice("/view/".length),
       activeView: "rendered",
@@ -897,6 +980,7 @@ async function handleDirectoryRequest(request, appConfig) {
   if (pathname.startsWith("/raw/")) {
     return await renderDirectoryFileRoute({
       method,
+      requestUrl,
       rootPath: appConfig.rootPath,
       routePath: pathname.slice("/raw/".length),
       activeView: "raw",
@@ -945,6 +1029,7 @@ async function handleFileRequest(request, appConfig) {
   if (pathname === "/" || pathname === "") {
     return await renderFilePageResponse({
       method,
+      requestUrl,
       filePath: appConfig.filePath,
       relativePath: appConfig.relativePath,
       rootPath: appConfig.rootPath,
@@ -959,6 +1044,7 @@ async function handleFileRequest(request, appConfig) {
   if (pathname === "/raw" || pathname === "/raw/") {
     return await renderFilePageResponse({
       method,
+      requestUrl,
       filePath: appConfig.filePath,
       relativePath: appConfig.relativePath,
       rootPath: appConfig.rootPath,
@@ -979,7 +1065,7 @@ async function handleFileRequest(request, appConfig) {
 }
 
 /**
- * @param {{ method: string; rootPath: string; routePath: string; activeView: "rendered" | "raw"; isPdf: boolean }} input
+ * @param {{ method: string; requestUrl: URL; rootPath: string; routePath: string; activeView: "rendered" | "raw"; isPdf: boolean }} input
  * @returns {Promise<Response>}
  */
 async function renderDirectoryFileRoute(input) {
@@ -1023,6 +1109,7 @@ async function renderDirectoryFileRoute(input) {
 
   return await renderFilePageResponse({
     method: input.method,
+    requestUrl: input.requestUrl,
     filePath: resolved.filePath,
     relativePath: resolved.relativePath,
     rootPath: input.rootPath,
@@ -1035,12 +1122,14 @@ async function renderDirectoryFileRoute(input) {
 }
 
 /**
- * @param {{ method: string; filePath: string; relativePath: string; rootPath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw"; isPdf: boolean }} input
+ * @param {{ method: string; requestUrl: URL; filePath: string; relativePath: string; rootPath: string; renderedHref: string; rawHref: string; backHref: string; activeView: "rendered" | "raw"; isPdf: boolean }} input
  * @returns {Promise<Response>}
  */
 async function renderFilePageResponse(input) {
   const markdown = await Bun.file(input.filePath).text();
   const title = toFileTitle(input.relativePath);
+  const isPrintView = isPrintViewRequested(input.requestUrl);
+  const shouldAutoPrint = isPrintView && isAutoPrintRequested(input.requestUrl);
 
   if (input.isPdf) {
     return await renderPdfResponse({
@@ -1050,20 +1139,24 @@ async function renderFilePageResponse(input) {
       relativePath: input.relativePath,
       rootPath: input.rootPath,
       sourcePath: input.filePath,
+      requestUrl: input.requestUrl,
     });
   }
 
   if (input.activeView === "raw") {
     return htmlResponse(renderMarkdownPage({
       title,
+      documentTitle: isPrintView ? title : undefined,
       relativePath: input.relativePath,
       renderedHref: input.renderedHref,
       rawHref: input.rawHref,
+      printHref: null,
       pdfHref: null,
       backHref: input.backHref,
       activeView: input.activeView,
       bodyHtml: `<section class="raw-body"><pre class="raw-block"><code>${escapeHtml(markdown)}</code></pre></section>`,
       hasMermaid: false,
+      shouldAutoPrint,
     }), 200, input.method);
   }
 
@@ -1071,14 +1164,17 @@ async function renderFilePageResponse(input) {
   const renderedHtml = transformMermaidBlocks(rawHtml);
   return htmlResponse(renderMarkdownPage({
     title,
+    documentTitle: isPrintView ? title : undefined,
     relativePath: input.relativePath,
     renderedHref: input.renderedHref,
     rawHref: input.rawHref,
+    printHref: appendQueryParam(appendQueryParam(input.renderedHref, "print", "1"), "autoprint", "1"),
     pdfHref: appendQueryParam(input.renderedHref, "pdf", "1"),
     backHref: input.backHref,
     activeView: input.activeView,
     bodyHtml: `<article class="markdown-body">${renderedHtml}</article>`,
     hasMermaid: renderedHtml !== rawHtml,
+    shouldAutoPrint,
   }), 200, input.method);
 }
 
@@ -1179,6 +1275,7 @@ function renderIndexPage(rootPath, files) {
     backHref: "/",
     renderedHref: "/",
     rawHref: null,
+    printHref: null,
     pdfHref: null,
     activeView: "index",
   });
@@ -1226,16 +1323,17 @@ function renderFileRow(file) {
 }
 
 /**
- * @param {{ title: string; relativePath: string; renderedHref: string; rawHref: string; pdfHref: string | null; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string; hasMermaid?: boolean }} input
+ * @param {{ title: string; documentTitle?: string; relativePath: string; renderedHref: string; rawHref: string; printHref: string | null; pdfHref: string | null; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string; hasMermaid?: boolean; shouldAutoPrint?: boolean }} input
  * @returns {string}
  */
 function renderMarkdownPage(input) {
   return renderDocument({
-    title: `${input.title} · mdview`,
+    title: input.documentTitle ?? `${input.title} · mdview`,
     navHtml: renderNav({
       backHref: input.backHref,
       renderedHref: input.renderedHref,
       rawHref: input.rawHref,
+      printHref: input.printHref,
       pdfHref: input.pdfHref,
       activeView: input.activeView,
     }),
@@ -1248,6 +1346,7 @@ function renderMarkdownPage(input) {
       ${input.bodyHtml}
     `,
     hasMermaid: input.hasMermaid,
+    shouldAutoPrint: input.shouldAutoPrint,
   });
 }
 
@@ -1262,6 +1361,7 @@ function renderErrorPage(input) {
       backHref: input.backHref,
       renderedHref: input.backHref ?? "/",
       rawHref: null,
+      printHref: null,
       pdfHref: null,
       activeView: "error",
     }),
@@ -1280,12 +1380,15 @@ function renderErrorPage(input) {
 }
 
 /**
- * @param {{ title: string; navHtml: string; contentHtml: string; hasMermaid?: boolean }} input
+ * @param {{ title: string; navHtml: string; contentHtml: string; hasMermaid?: boolean; shouldAutoPrint?: boolean }} input
  * @returns {string}
  */
 function renderDocument(input) {
   const mermaidScript = input.hasMermaid
     ? renderMermaidScript()
+    : "";
+  const autoPrintScript = input.shouldAutoPrint
+    ? renderAutoPrintScript()
     : "";
   const langScripts = HIGHLIGHT_LANG_PACKS.map((url) => `<script src="${url}"></script>`).join("\n    ");
 
@@ -1298,6 +1401,7 @@ function renderDocument(input) {
     <title>${escapeHtml(input.title)}</title>
     <link rel="stylesheet" href="${HIGHLIGHT_CSS_URL}">
     <style>${STYLES}</style>
+    <style media="print">${PRINT_STYLES}</style>
   </head>
   <body>
     <div class="page">
@@ -1308,12 +1412,13 @@ function renderDocument(input) {
     ${langScripts}
     <script>hljs.highlightAll();</script>
     ${mermaidScript}
+    ${autoPrintScript}
   </body>
 </html>`;
 }
 
 /**
- * @param {{ backHref: string | null; renderedHref: string; rawHref: string | null; pdfHref: string | null; activeView: "index" | "rendered" | "raw" | "error" }} input
+ * @param {{ backHref: string | null; renderedHref: string; rawHref: string | null; printHref: string | null; pdfHref: string | null; activeView: "index" | "rendered" | "raw" | "error" }} input
  * @returns {string}
  */
 function renderNav(input) {
@@ -1327,6 +1432,10 @@ function renderNav(input) {
 
   if (input.rawHref) {
     actions.push(`<a class="pill ${input.activeView === "raw" ? "active" : ""}" href="${input.rawHref}">Raw</a>`);
+  }
+
+  if (input.printHref) {
+    actions.push(`<a class="pill" href="${input.printHref}" target="_blank" rel="noopener noreferrer">Print</a>`);
   }
 
   if (input.pdfHref) {
@@ -1365,46 +1474,190 @@ function renderMermaidScript() {
 }
 
 /**
+ * @returns {string}
+ */
+function renderAutoPrintScript() {
+  return `<script>
+  function mdviewSleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function mdviewPrintWhenReady() {
+    const deadline = Date.now() + 15000;
+
+    while (Date.now() < deadline) {
+      const mermaidBlocks = Array.from(document.querySelectorAll(".mermaid"));
+      const mermaidReady = mermaidBlocks.length === 0 || mermaidBlocks.every((block) => block.querySelector("svg"));
+      if (!mermaidReady) {
+        await mdviewSleep(120);
+        continue;
+      }
+
+      if (document.fonts?.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          // Ignore font loading failures and print with the fonts that are available.
+        }
+      }
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      window.print();
+      return;
+    }
+
+    window.print();
+  }
+
+  window.addEventListener("load", () => {
+    void mdviewPrintWhenReady();
+  }, { once: true });
+</script>`;
+}
+
+/**
  * @param {URL} requestUrl
  * @returns {boolean}
  */
 function isPdfExportRequested(requestUrl) {
-  return requestUrl.searchParams.get("pdf") === "1" || requestUrl.searchParams.get("print") === "1";
+  return requestUrl.searchParams.get("pdf") === "1";
 }
 
 /**
- * @param {{ method: string; markdown: string; title: string; relativePath: string; rootPath: string; sourcePath: string }} input
+ * @param {URL} requestUrl
+ * @returns {boolean}
+ */
+function isPrintViewRequested(requestUrl) {
+  return requestUrl.searchParams.get("print") === "1";
+}
+
+/**
+ * @param {URL} requestUrl
+ * @returns {boolean}
+ */
+function isAutoPrintRequested(requestUrl) {
+  return requestUrl.searchParams.get("autoprint") === "1";
+}
+
+/**
+ * @param {{ method: string; markdown: string; title: string; relativePath: string; rootPath: string; sourcePath: string; requestUrl: URL }} input
  * @returns {Promise<Response>}
  */
 async function renderPdfResponse(input) {
+  const headers = {
+    "content-disposition": `inline; filename="${buildPdfFilename(input.relativePath)}"`,
+    "content-type": "application/pdf",
+  };
+
+  if (input.method === "HEAD") {
+    return new Response(null, {
+      status: 200,
+      headers,
+    });
+  }
+
   const pdfBuffer = await createPdfBuffer({
     markdown: input.markdown,
     title: input.title,
     rootPath: input.rootPath,
     sourcePath: input.sourcePath,
+    requestUrl: input.requestUrl,
   });
 
-  return new Response(input.method === "HEAD" ? null : pdfBuffer, {
+  return new Response(pdfBuffer, {
     status: 200,
-    headers: {
-      "content-disposition": `inline; filename="${buildPdfFilename(input.relativePath)}"`,
-      "content-type": "application/pdf",
-    },
+    headers,
   });
+}
+
+/**
+ * @param {{ markdown: string; title: string; rootPath: string; sourcePath: string; requestUrl: URL }} input
+ * @returns {Promise<Buffer>}
+ */
+async function createPdfBuffer(input) {
+  const browserPdfBuffer = await createBrowserPdfBuffer(input);
+  if (browserPdfBuffer) return browserPdfBuffer;
+
+  return await createPdfKitBuffer(input);
+}
+
+/**
+ * @param {{ markdown: string; title: string; requestUrl: URL }} input
+ * @returns {Promise<Buffer | null>}
+ */
+async function createBrowserPdfBuffer(input) {
+  const chromium = await loadPlaywrightChromium();
+  if (!chromium) {
+    warnPdfBrowserFallbackOnce("missing-playwright", "browser PDF rendering unavailable; playwright-core is not installed");
+    return null;
+  }
+
+  const executablePath = await resolvePdfBrowserExecutable();
+  if (!executablePath) {
+    warnPdfBrowserFallbackOnce("missing-browser", "browser PDF rendering unavailable; no Chromium-based browser was found");
+    return null;
+  }
+
+  let browser;
+
+  try {
+    browser = await chromium.launch({
+      executablePath,
+      headless: true,
+      args: getPdfBrowserLaunchArgs(),
+    });
+
+    const context = await browser.newContext({
+      colorScheme: "light",
+      viewport: { width: 1280, height: 960 },
+    });
+    const page = await context.newPage();
+    await page.emulateMedia({ media: "print" });
+
+    const sourceUrl = buildPdfBrowserSourceUrl(input.requestUrl);
+    const response = await page.goto(sourceUrl, {
+      waitUntil: "networkidle",
+      timeout: PDF_BROWSER_TIMEOUT_MS,
+    });
+
+    if (!response) {
+      throw new Error("source page did not return a response");
+    }
+
+    if (!response.ok()) {
+      throw new Error(`source page returned ${response.status()}`);
+    }
+
+    await waitForPdfBrowserPage(page);
+
+    const pdf = await page.pdf({
+      format: PDF_PAGE_SIZE,
+      preferCSSPageSize: true,
+      printBackground: true,
+    });
+
+    return Buffer.from(pdf);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    warnPdfBrowserFallbackOnce("browser-render-failure", `browser PDF rendering failed (${message}); falling back to PDFKit`);
+    return null;
+  } finally {
+    await browser?.close();
+  }
 }
 
 /**
  * @param {{ markdown: string; title: string; rootPath: string; sourcePath: string }} input
  * @returns {Promise<Buffer>}
  */
-async function createPdfBuffer(input) {
+async function createPdfKitBuffer(input) {
   const document = new PDFDocument({
     info: {
       Author: "mdview",
       Title: input.title,
     },
-    margin: 54,
-    size: "A4",
+    margin: PDF_MARGIN_POINTS,
+    size: PDF_PAGE_SIZE,
   });
 
   const bufferPromise = collectPdfBuffer(document);
@@ -1415,6 +1668,106 @@ async function createPdfBuffer(input) {
   });
   document.end();
   return await bufferPromise;
+}
+
+/**
+ * @returns {Promise<import("playwright-core").BrowserType | null>}
+ */
+async function loadPlaywrightChromium() {
+  if (playwrightChromiumPromise) {
+    return await playwrightChromiumPromise;
+  }
+
+  playwrightChromiumPromise = import("playwright-core")
+    .then((module) => module.chromium ?? null)
+    .catch(() => null);
+
+  return await playwrightChromiumPromise;
+}
+
+/**
+ * @returns {Promise<string | null>}
+ */
+async function resolvePdfBrowserExecutable() {
+  if (cachedPdfBrowserExecutable !== undefined) {
+    return cachedPdfBrowserExecutable;
+  }
+
+  const platformCandidates = PDF_BROWSER_PATH_CANDIDATES[process.platform] ?? [];
+  for (const candidate of platformCandidates) {
+    const fileStat = await getStat(candidate);
+    if (!fileStat?.isFile()) continue;
+
+    cachedPdfBrowserExecutable = candidate;
+    return cachedPdfBrowserExecutable;
+  }
+
+  for (const candidate of PDF_BROWSER_COMMAND_CANDIDATES) {
+    const resolvedPath = Bun.which(candidate);
+    if (!resolvedPath) continue;
+
+    cachedPdfBrowserExecutable = resolvedPath;
+    return cachedPdfBrowserExecutable;
+  }
+
+  cachedPdfBrowserExecutable = null;
+  return cachedPdfBrowserExecutable;
+}
+
+/**
+ * @returns {string[]}
+ */
+function getPdfBrowserLaunchArgs() {
+  if (process.platform !== "linux") return [];
+
+  return ["--disable-dev-shm-usage", "--no-sandbox"];
+}
+
+/**
+ * @param {URL} requestUrl
+ * @returns {string}
+ */
+function buildPdfBrowserSourceUrl(requestUrl) {
+  const sourceUrl = new URL(requestUrl);
+  sourceUrl.searchParams.delete("pdf");
+  sourceUrl.searchParams.delete("print");
+  sourceUrl.searchParams.delete("autoprint");
+
+  if (sourceUrl.hostname === "0.0.0.0" || sourceUrl.hostname === "::") {
+    sourceUrl.hostname = "127.0.0.1";
+  }
+
+  return sourceUrl.toString();
+}
+
+/**
+ * @param {import("playwright-core").Page} page
+ * @returns {Promise<void>}
+ */
+async function waitForPdfBrowserPage(page) {
+  await page.waitForFunction(
+    () => {
+      const contentRoot = document.querySelector(".markdown-body, .raw-body, .empty-state, .error-body");
+      if (!contentRoot) return false;
+
+      const mermaidBlocks = Array.from(document.querySelectorAll(".mermaid"));
+      if (mermaidBlocks.length === 0) return true;
+
+      return mermaidBlocks.every((block) => block.querySelector("svg"));
+    },
+    { timeout: PDF_BROWSER_TIMEOUT_MS },
+  );
+}
+
+/**
+ * @param {string} key
+ * @param {string} message
+ */
+function warnPdfBrowserFallbackOnce(key, message) {
+  if (PDF_BROWSER_FALLBACK_WARNINGS.has(key)) return;
+
+  PDF_BROWSER_FALLBACK_WARNINGS.add(key);
+  console.warn(`warning: ${message}`);
 }
 
 /**
