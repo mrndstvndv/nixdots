@@ -44,6 +44,60 @@
 
    outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, my-neovim, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
    let
+      supportedStandaloneHomeSystems = [
+        "aarch64-linux"
+        "x86_64-linux"
+      ];
+
+      currentStandaloneHomeSystem =
+        if !(builtins ? currentSystem) then
+          throw ''
+            homeConfigurations.alpine needs host system detection, which requires impure flake evaluation.
+            Use one of:
+              - home-manager switch --flake .#alpine --impure
+              - nix run .#alpine
+              - home-manager switch --flake .#alpine-aarch64-linux
+              - home-manager switch --flake .#alpine-x86_64-linux
+          ''
+        else if builtins.elem builtins.currentSystem supportedStandaloneHomeSystems then
+          builtins.currentSystem
+        else
+          throw ''
+            Unsupported standalone Home Manager system: ${builtins.currentSystem}
+            Supported systems: ${builtins.concatStringsSep ", " supportedStandaloneHomeSystems}
+          '';
+
+      mkStandaloneHomeConfiguration = system:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = nixpkgs.legacyPackages.${system};
+          extraSpecialArgs = { inherit my-neovim codex piAgent; };
+          modules = [
+            ./alpine/home.nix
+            {
+              nixpkgs.config = {
+                allowUnfree = true;
+                allowUnfreePredicate = (_: true);
+              };
+            }
+          ];
+        };
+
+      mkStandaloneHomeApp = system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          homeManager = home-manager.packages.${system}.default;
+          switchScript = pkgs.writeShellApplication {
+            name = "alpine-home-manager";
+            runtimeInputs = [ homeManager ];
+            text = ''
+              exec home-manager switch --flake ${self.outPath}#alpine-${system} "$@"
+            '';
+          };
+        in {
+          type = "app";
+          program = "${switchScript}/bin/alpine-home-manager";
+        };
+
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
          imports = [ inputs.home-manager.darwinModules.home-manager ];
@@ -118,22 +172,17 @@
       ];
     };
 
+    apps = nixpkgs.lib.genAttrs supportedStandaloneHomeSystems (system: {
+      alpine = mkStandaloneHomeApp system;
+    });
+
     # Standalone Home Manager for Alpine chroot (Termux)
-    homeConfigurations = nixpkgs.lib.mapAttrs (_: system: home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs.legacyPackages.${system};
-      extraSpecialArgs = { inherit my-neovim codex piAgent; };
-      modules = [
-        ./alpine/home.nix
-        {
-          nixpkgs.config = {
-            allowUnfree = true;
-            allowUnfreePredicate = (_: true);
-          };
-        }
-      ];
-    }) {
-      alpine = "x86_64-linux";
-      alpine-aarch64 = "aarch64-linux";
+    homeConfigurations = {
+      alpine = mkStandaloneHomeConfiguration currentStandaloneHomeSystem;
+      alpine-aarch64 = mkStandaloneHomeConfiguration "aarch64-linux";
+      alpine-aarch64-linux = mkStandaloneHomeConfiguration "aarch64-linux";
+      alpine-x86_64 = mkStandaloneHomeConfiguration "x86_64-linux";
+      alpine-x86_64-linux = mkStandaloneHomeConfiguration "x86_64-linux";
     };
   };
 }
