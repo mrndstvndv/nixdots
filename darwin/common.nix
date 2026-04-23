@@ -1,7 +1,5 @@
 { pkgs, my-neovim, piAgent ? null, lib, ... }:
 {
-  nixpkgs.config.allowUnfree = true;
-
   imports =
     lib.optionals (piAgent != null) [
       piAgent.homeManagerModules.default

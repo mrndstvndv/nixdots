@@ -49,6 +49,15 @@
         "x86_64-linux"
       ];
 
+      androidCliSystems = [
+        "aarch64-darwin"
+        "x86_64-linux"
+      ];
+
+      androidCliOverlay = final: prev: {
+        android-cli = final.callPackage ./pkgs/android-cli.nix { };
+      };
+
       currentStandaloneHomeSystem =
         if !(builtins ? currentSystem) then
           throw ''
@@ -98,14 +107,35 @@
           program = "${switchScript}/bin/alpine-home-manager";
         };
 
+      mkAndroidCliPackages = system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ androidCliOverlay ];
+            config = {
+              allowUnfree = true;
+              allowUnfreePredicate = (_: true);
+            };
+          };
+          package = pkgs.android-cli;
+        in {
+          default = package;
+          android-cli = package;
+        };
+
       configuration = { pkgs, home-manager, nixpkgs, ... }:
        {
          imports = [ inputs.home-manager.darwinModules.home-manager ];
+         nixpkgs.config = {
+           allowUnfree = true;
+           allowUnfreePredicate = (_: true);
+         };
          users.users.steven = {
            name = "steven";
            home = "/Users/steven";
            shell = pkgs.fish;
          };
+         home-manager.useGlobalPkgs = true;
          home-manager.extraSpecialArgs = { inherit (inputs) my-neovim codex; inherit piAgent; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
@@ -153,7 +183,7 @@
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
         neru.darwinModules.default
-        { nixpkgs.overlays = [ neru.overlays.default ]; }
+        { nixpkgs.overlays = [ neru.overlays.default androidCliOverlay ]; }
         { services.neru.enable = true; }
         configuration 
       ];
@@ -171,6 +201,8 @@
         ./nix-on-droid/system.nix
       ];
     };
+
+    packages = nixpkgs.lib.genAttrs androidCliSystems mkAndroidCliPackages;
 
     apps = nixpkgs.lib.genAttrs supportedStandaloneHomeSystems (system: {
       alpine = mkStandaloneHomeApp system;

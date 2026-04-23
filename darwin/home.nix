@@ -9,6 +9,7 @@
   home.packages = [
     # pkgs.daisydisk
     pkgs.tailscale
+    pkgs.android-cli
   ];
 
   # Darwin-specific bun and fish config

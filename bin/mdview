@@ -4,6 +4,22 @@
 import { readdir, realpath, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import {
+  AlignmentType,
+  BorderStyle,
+  Document as DocxDocument,
+  ExternalHyperlink,
+  HeadingLevel,
+  ImageRun,
+  Packer,
+  PageBreak,
+  Paragraph as DocxParagraph,
+  Table as DocxTable,
+  TableCell as DocxTableCell,
+  TableRow as DocxTableRow,
+  TextRun,
+  WidthType,
+} from "docx";
 import PDFDocument from "pdfkit";
 import { marked } from "marked";
 
@@ -17,6 +33,8 @@ import { marked } from "marked";
 /** @typedef {{ text?: string; tokens?: PdfToken[]; task?: boolean; checked?: boolean }} PdfListItem */
 /** @typedef {{ text?: string; tokens?: PdfToken[]; header?: boolean; align?: string | null }} PdfTableCell */
 /** @typedef {{ indent: number; rootPath: string; sourcePath: string }} PdfRenderContext */
+/** @typedef {{ indentTwips: number; rootPath: string; sourcePath: string }} DocxRenderContext */
+/** @typedef {{ bold?: boolean; italic?: boolean; strike?: boolean; code?: boolean; hyperlink?: boolean }} DocxInlineStyle */
 
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 3000;
@@ -89,6 +107,23 @@ const PDF_BROWSER_PATH_CANDIDATES = {
   ],
 };
 const PDF_BROWSER_FALLBACK_WARNINGS = new Set();
+const DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DOCX_IMAGE_FETCH_TIMEOUT_MS = 10_000;
+const DOCX_MAX_IMAGE_WIDTH_PX = 520;
+const DOCX_MAX_IMAGE_HEIGHT_PX = 720;
+const DOCX_LIST_INDENT_TWIPS = 720;
+const DOCX_LIST_HANGING_TWIPS = 280;
+const DOCX_BLOCKQUOTE_INDENT_TWIPS = 360;
+const DOCX_CODE_BORDER = {
+  color: "d8e0ee",
+  size: 4,
+  style: BorderStyle.SINGLE,
+};
+const DOCX_TABLE_BORDER = {
+  color: "d8e0ee",
+  size: 4,
+  style: BorderStyle.SINGLE,
+};
 let cachedPdfBrowserExecutable;
 let playwrightChromiumPromise = null;
 
@@ -790,17 +825,18 @@ img {
 
 const HELP_TEXT = `mdview <path> [--host 0.0.0.0] [--port 3000]
 
-Serve one Markdown file or a directory of Markdown files as mobile-friendly HTML, with server-side PDF export.
+Serve one Markdown file or a directory of Markdown files as mobile-friendly HTML, with server-side PDF and DOCX export.
 
 Flags:
   --host <host>   Bind host. Default: 0.0.0.0
   --port <port>   Bind port. Default: 3000
   --help          Show this help
 
-PDF export:
-  Append ?pdf=1 to a rendered Markdown page for server-side export.
+Export:
+  Append ?pdf=1 to a rendered Markdown page for server-side PDF export.
+  Append ?docx=1 to a rendered Markdown page for server-side DOCX export.
   Append ?print=1 or use the Print action to let the client browser print/save as PDF.
-  Server-side export uses a local Chromium-based browser when available, falls back to PDFKit.
+  Server-side PDF export uses a local Chromium-based browser when available, falls back to PDFKit.
 `;
 
 main().catch(handleFatalError);
@@ -1093,9 +1129,25 @@ async function handleFileRequest(request, appConfig) {
     });
   }
 
+  const decodedPath = decodeRoutePath(pathname.slice(1));
+  if (decodedPath) {
+    const resolvedPath = path.resolve(appConfig.rootPath, decodedPath);
+    if (isWithinPath(appConfig.rootPath, resolvedPath)) {
+      const fileStat = await getStat(resolvedPath);
+      if (fileStat?.isFile()) {
+        const file = Bun.file(resolvedPath);
+        return new Response(file, {
+          headers: {
+            "content-type": file.type || "application/octet-stream",
+          },
+        });
+      }
+    }
+  }
+
   return htmlResponse(renderErrorPage({
     title: "Not found",
-    message: "File mode only serves / and /raw.",
+    message: "File mode only serves /, /raw, and files under the served root.",
     status: 404,
     backHref: "/",
   }), 404, method);
@@ -1166,7 +1218,19 @@ async function renderFilePageResponse(input) {
   const markdown = await Bun.file(input.filePath).text();
   const title = toFileTitle(input.relativePath);
   const isPrintView = isPrintViewRequested(input.requestUrl);
+  const isDocx = isDocxExportRequested(input.requestUrl);
   const shouldAutoPrint = isPrintView && isAutoPrintRequested(input.requestUrl);
+
+  if (isDocx) {
+    return await renderDocxResponse({
+      method: input.method,
+      markdown,
+      title,
+      relativePath: input.relativePath,
+      rootPath: input.rootPath,
+      sourcePath: input.filePath,
+    });
+  }
 
   if (input.isPdf) {
     return await renderPdfResponse({
@@ -1189,6 +1253,7 @@ async function renderFilePageResponse(input) {
       rawHref: input.rawHref,
       printHref: null,
       pdfHref: null,
+      docxHref: null,
       backHref: input.backHref,
       activeView: input.activeView,
       bodyHtml: `<section class="raw-body"><pre class="raw-block"><code>${escapeHtml(markdown)}</code></pre></section>`,
@@ -1198,7 +1263,7 @@ async function renderFilePageResponse(input) {
   }
 
   const rawHtml = Bun.markdown.html(markdown, MARKDOWN_OPTIONS);
-  const renderedHtml = transformMermaidBlocks(rawHtml);
+  const renderedHtml = transformRenderedHtml(rawHtml, input.relativePath);
   return htmlResponse(renderMarkdownPage({
     title,
     documentTitle: isPrintView ? title : undefined,
@@ -1207,6 +1272,7 @@ async function renderFilePageResponse(input) {
     rawHref: input.rawHref,
     printHref: appendQueryParam(appendQueryParam(input.renderedHref, "print", "1"), "autoprint", "1"),
     pdfHref: appendQueryParam(input.renderedHref, "pdf", "1"),
+    docxHref: appendQueryParam(input.renderedHref, "docx", "1"),
     backHref: input.backHref,
     activeView: input.activeView,
     bodyHtml: `<article class="markdown-body">${renderedHtml}</article>`,
@@ -1314,6 +1380,7 @@ function renderIndexPage(rootPath, files) {
     rawHref: null,
     printHref: null,
     pdfHref: null,
+    docxHref: null,
     activeView: "index",
   });
 
@@ -1360,7 +1427,7 @@ function renderFileRow(file) {
 }
 
 /**
- * @param {{ title: string; documentTitle?: string; relativePath: string; renderedHref: string; rawHref: string; printHref: string | null; pdfHref: string | null; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string; hasMermaid?: boolean; shouldAutoPrint?: boolean }} input
+ * @param {{ title: string; documentTitle?: string; relativePath: string; renderedHref: string; rawHref: string; printHref: string | null; pdfHref: string | null; docxHref: string | null; backHref: string; activeView: "rendered" | "raw"; bodyHtml: string; hasMermaid?: boolean; shouldAutoPrint?: boolean }} input
  * @returns {string}
  */
 function renderMarkdownPage(input) {
@@ -1372,6 +1439,7 @@ function renderMarkdownPage(input) {
       rawHref: input.rawHref,
       printHref: input.printHref,
       pdfHref: input.pdfHref,
+      docxHref: input.docxHref,
       activeView: input.activeView,
     }),
     contentHtml: `
@@ -1400,6 +1468,7 @@ function renderErrorPage(input) {
       rawHref: null,
       printHref: null,
       pdfHref: null,
+      docxHref: null,
       activeView: "error",
     }),
     contentHtml: `
@@ -1455,7 +1524,7 @@ function renderDocument(input) {
 }
 
 /**
- * @param {{ backHref: string | null; renderedHref: string; rawHref: string | null; printHref: string | null; pdfHref: string | null; activeView: "index" | "rendered" | "raw" | "error" }} input
+ * @param {{ backHref: string | null; renderedHref: string; rawHref: string | null; printHref: string | null; pdfHref: string | null; docxHref: string | null; activeView: "index" | "rendered" | "raw" | "error" }} input
  * @returns {string}
  */
 function renderNav(input) {
@@ -1477,6 +1546,10 @@ function renderNav(input) {
 
   if (input.pdfHref) {
     actions.push(`<a class="pill" href="${input.pdfHref}" target="_blank" rel="noopener noreferrer">PDF</a>`);
+  }
+
+  if (input.docxHref) {
+    actions.push(`<a class="pill" href="${input.docxHref}">DOCX</a>`);
   }
 
   return `
@@ -1564,6 +1637,14 @@ function isPdfExportRequested(requestUrl) {
  * @param {URL} requestUrl
  * @returns {boolean}
  */
+function isDocxExportRequested(requestUrl) {
+  return requestUrl.searchParams.get("docx") === "1";
+}
+
+/**
+ * @param {URL} requestUrl
+ * @returns {boolean}
+ */
 function isPrintViewRequested(requestUrl) {
   return requestUrl.searchParams.get("print") === "1";
 }
@@ -1574,6 +1655,878 @@ function isPrintViewRequested(requestUrl) {
  */
 function isAutoPrintRequested(requestUrl) {
   return requestUrl.searchParams.get("autoprint") === "1";
+}
+
+/**
+ * @param {{ method: string; markdown: string; title: string; relativePath: string; rootPath: string; sourcePath: string }} input
+ * @returns {Promise<Response>}
+ */
+async function renderDocxResponse(input) {
+  const headers = {
+    "content-disposition": `attachment; filename="${buildDocxFilename(input.relativePath)}"`,
+    "content-type": DOCX_MIME_TYPE,
+  };
+
+  if (input.method === "HEAD") {
+    return new Response(null, {
+      status: 200,
+      headers,
+    });
+  }
+
+  const docxBuffer = await createDocxBuffer({
+    markdown: input.markdown,
+    title: input.title,
+    rootPath: input.rootPath,
+    sourcePath: input.sourcePath,
+  });
+
+  return new Response(docxBuffer, {
+    status: 200,
+    headers,
+  });
+}
+
+/**
+ * @param {{ markdown: string; title: string; rootPath: string; sourcePath: string }} input
+ * @returns {Promise<Buffer>}
+ */
+async function createDocxBuffer(input) {
+  const children = await renderMarkdownToDocxBlocks(input.markdown, {
+    indentTwips: 0,
+    rootPath: input.rootPath,
+    sourcePath: input.sourcePath,
+  });
+
+  const document = new DocxDocument({
+    creator: "mdview",
+    description: "Exported from mdview",
+    title: input.title,
+    sections: [{
+      children: children.length > 0
+        ? children
+        : [new DocxParagraph({ text: "" })],
+    }],
+  });
+
+  return await Packer.toBuffer(document);
+}
+
+/**
+ * @param {string} markdown
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph> | InstanceType<typeof DocxTable>)[]>}
+ */
+async function renderMarkdownToDocxBlocks(markdown, context) {
+  const tokens = /** @type {PdfToken[]} */ (marked.lexer(markdown, { gfm: true, breaks: false }));
+  return await renderDocxBlocks(tokens, context);
+}
+
+/**
+ * @param {PdfToken[]} tokens
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph> | InstanceType<typeof DocxTable>)[]>}
+ */
+async function renderDocxBlocks(tokens, context) {
+  const blocks = [];
+
+  for (const token of stripSpaceTokens(tokens)) {
+    blocks.push(...await renderDocxBlock(token, context));
+  }
+
+  return blocks;
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph> | InstanceType<typeof DocxTable>)[]>}
+ */
+async function renderDocxBlock(token, context) {
+  switch (token.type) {
+    case "heading":
+      return renderDocxHeading(token, context);
+    case "paragraph":
+      return await renderDocxParagraph(token, context);
+    case "text":
+      return await renderDocxText(token, context);
+    case "list":
+      return await renderDocxList(token, context);
+    case "blockquote":
+      return await renderDocxBlockquote(token, context);
+    case "code":
+      return renderDocxCode(token, context);
+    case "table":
+      return await renderDocxTable(token, context);
+    case "hr":
+      return [new DocxParagraph(applyDocxContextIndent({
+        spacing: { before: 80, after: 120 },
+        thematicBreak: true,
+      }, context))];
+    case "html":
+      return renderDocxHtml(token, context);
+    default:
+      return [];
+  }
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {(InstanceType<typeof DocxParagraph>)[]}
+ */
+function renderDocxHeading(token, context) {
+  const text = extractInlineText(token.tokens ?? []).trim() || (token.text ?? "").trim();
+  if (!text) return [];
+
+  const depth = Math.min(Math.max(Number(token.depth ?? 1), 1), 6);
+  const heading = [
+    HeadingLevel.HEADING_1,
+    HeadingLevel.HEADING_2,
+    HeadingLevel.HEADING_3,
+    HeadingLevel.HEADING_4,
+    HeadingLevel.HEADING_5,
+    HeadingLevel.HEADING_6,
+  ][depth - 1];
+
+  return [new DocxParagraph(applyDocxContextIndent({
+    children: [new TextRun({ text })],
+    heading,
+    spacing: {
+      before: depth === 1 ? 280 : 200,
+      after: 80,
+    },
+  }, context))];
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph>)[]>}
+ */
+async function renderDocxParagraph(token, context) {
+  const paragraphTokens = stripSpaceTokens(token.tokens ?? []);
+  if (paragraphTokens.length === 0) return [];
+
+  if (isStandaloneImageParagraph(paragraphTokens)) {
+    return await renderDocxStandaloneImage(paragraphTokens[0], context);
+  }
+
+  const children = await renderDocxInlineTokens(paragraphTokens, context);
+  if (children.length === 0) return [];
+
+  return [new DocxParagraph(applyDocxContextIndent({
+    children,
+    spacing: { after: 120 },
+  }, context))];
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph>)[]>}
+ */
+async function renderDocxText(token, context) {
+  const tokens = token.tokens?.length
+    ? stripSpaceTokens(token.tokens)
+    : [token];
+  const children = await renderDocxInlineTokens(tokens, context);
+  if (children.length === 0) return [];
+
+  return [new DocxParagraph(applyDocxContextIndent({
+    children,
+    spacing: { after: 120 },
+  }, context))];
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph> | InstanceType<typeof DocxTable>)[]>}
+ */
+async function renderDocxList(token, context) {
+  const items = token.items ?? [];
+  if (items.length === 0) return [];
+
+  const blocks = [];
+  let counter = Number.parseInt(String(token.start ?? 1), 10);
+  if (Number.isNaN(counter) || counter < 1) {
+    counter = 1;
+  }
+
+  for (const item of items) {
+    const itemTokens = stripSpaceTokens(item.tokens ?? []);
+    if (itemTokens.length === 0) {
+      if (token.ordered) counter += 1;
+      continue;
+    }
+
+    const { inlineTokens, blockTokens } = splitInlineAndBlockTokens(itemTokens);
+    const bullet = token.ordered
+      ? `${counter}. `
+      : item.task
+        ? item.checked
+          ? "[x] "
+          : "[ ] "
+        : "• ";
+
+    if (inlineTokens.length > 0 || item.task) {
+      const children = [
+        new TextRun({ text: bullet, bold: token.ordered || item.task }),
+        ...await renderDocxInlineTokens(inlineTokens, context),
+      ];
+
+      blocks.push(new DocxParagraph(applyDocxContextIndent({
+        children,
+        indent: {
+          left: DOCX_LIST_INDENT_TWIPS,
+          hanging: DOCX_LIST_HANGING_TWIPS,
+        },
+        spacing: { after: 60 },
+      }, context)));
+    }
+
+    if (blockTokens.length > 0) {
+      blocks.push(...await renderDocxBlocks(blockTokens, {
+        ...context,
+        indentTwips: context.indentTwips + DOCX_LIST_INDENT_TWIPS,
+      }));
+    }
+
+    if (token.ordered) counter += 1;
+  }
+
+  return blocks;
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph> | InstanceType<typeof DocxTable>)[]>}
+ */
+async function renderDocxBlockquote(token, context) {
+  const quoteTokens = stripSpaceTokens(token.tokens ?? []);
+  if (quoteTokens.length === 0) return [];
+
+  return await renderDocxBlocks(quoteTokens, {
+    ...context,
+    indentTwips: context.indentTwips + DOCX_BLOCKQUOTE_INDENT_TWIPS,
+  });
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {(InstanceType<typeof DocxParagraph>)[]}
+ */
+function renderDocxCode(token, context) {
+  const code = (token.text ?? token.raw ?? "").replace(/\n+$/, "");
+  if (!code.trim()) return [];
+
+  return [new DocxParagraph(applyDocxContextIndent({
+    children: createDocxTextRuns(code, { code: true }),
+    border: {
+      top: DOCX_CODE_BORDER,
+      right: DOCX_CODE_BORDER,
+      bottom: DOCX_CODE_BORDER,
+      left: DOCX_CODE_BORDER,
+    },
+    shading: { fill: "f5f7fb" },
+    spacing: { before: 80, after: 140 },
+  }, context))];
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxTable>)[]>}
+ */
+async function renderDocxTable(token, context) {
+  const header = token.header ?? [];
+  const rows = token.rows ?? [];
+  if (header.length === 0 && rows.length === 0) return [];
+
+  /** @type {InstanceType<typeof DocxTableRow>[]} */
+  const tableRows = [];
+
+  if (header.length > 0) {
+    tableRows.push(new DocxTableRow({
+      children: await Promise.all(header.map((cell) => createDocxTableCell(cell, context))),
+    }));
+  }
+
+  for (const row of rows) {
+    tableRows.push(new DocxTableRow({
+      children: await Promise.all(row.map((cell) => createDocxTableCell(cell, context))),
+    }));
+  }
+
+  return [new DocxTable({
+    rows: tableRows,
+    width: {
+      size: 100,
+      type: WidthType.PERCENTAGE,
+    },
+  })];
+}
+
+/**
+ * @param {PdfTableCell} cell
+ * @param {DocxRenderContext} context
+ * @returns {Promise<InstanceType<typeof DocxTableCell>>}
+ */
+async function createDocxTableCell(cell, context) {
+  const children = await renderDocxInlineTokens(stripSpaceTokens(cell.tokens ?? []), context);
+  const alignment = toDocxAlignment(cell.align ?? null);
+
+  return new DocxTableCell({
+    borders: {
+      top: DOCX_TABLE_BORDER,
+      right: DOCX_TABLE_BORDER,
+      bottom: DOCX_TABLE_BORDER,
+      left: DOCX_TABLE_BORDER,
+    },
+    shading: cell.header ? { fill: "eef2f8" } : undefined,
+    children: [new DocxParagraph({
+      alignment,
+      children: children.length > 0
+        ? children
+        : [new TextRun({ text: "" })],
+      spacing: { after: 0 },
+    })],
+  });
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {(InstanceType<typeof DocxParagraph>)[]}
+ */
+function renderDocxHtml(token, context) {
+  const rawHtml = token.raw ?? token.text ?? "";
+  if (isPdfPageBreakHtml(rawHtml)) {
+    return [new DocxParagraph({ children: [new PageBreak()] })];
+  }
+
+  const text = stripHtml(rawHtml).trim();
+  if (!text) return [];
+
+  return [new DocxParagraph(applyDocxContextIndent({
+    children: createDocxTextRuns(text),
+    spacing: { after: 120 },
+  }, context))];
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof DocxParagraph>)[]>}
+ */
+async function renderDocxStandaloneImage(token, context) {
+  const children = await resolveDocxImageChildren(token, context);
+  if (children.length === 0) return [];
+
+  return [new DocxParagraph(applyDocxContextIndent({
+    alignment: AlignmentType.CENTER,
+    children,
+    spacing: { after: 120 },
+  }, context))];
+}
+
+/**
+ * @param {PdfToken[]} tokens
+ * @param {DocxRenderContext} context
+ * @param {DocxInlineStyle} [style]
+ * @returns {Promise<(InstanceType<typeof TextRun> | InstanceType<typeof ImageRun> | InstanceType<typeof ExternalHyperlink>)[]>}
+ */
+async function renderDocxInlineTokens(tokens, context, style = {}) {
+  const children = [];
+
+  for (const token of tokens) {
+    if (token.type === "text" && token.tokens?.length) {
+      children.push(...await renderDocxInlineTokens(stripSpaceTokens(token.tokens), context, style));
+      continue;
+    }
+
+    switch (token.type) {
+      case "text":
+      case "escape": {
+        const text = token.text ?? token.raw ?? "";
+        children.push(...createDocxTextRuns(text, style));
+        continue;
+      }
+      case "codespan": {
+        const text = token.text ?? token.raw ?? "";
+        children.push(...createDocxTextRuns(text, { ...style, code: true }));
+        continue;
+      }
+      case "strong":
+        children.push(...await renderDocxInlineTokens(token.tokens ?? [], context, { ...style, bold: true }));
+        continue;
+      case "em":
+        children.push(...await renderDocxInlineTokens(token.tokens ?? [], context, { ...style, italic: true }));
+        continue;
+      case "del":
+        children.push(...await renderDocxInlineTokens(token.tokens ?? [], context, { ...style, strike: true }));
+        continue;
+      case "link": {
+        const link = token.href?.trim();
+        const linkChildren = await renderDocxInlineTokens(stripSpaceTokens(token.tokens ?? []), context, { ...style, hyperlink: true });
+        if (!link) {
+          children.push(...linkChildren);
+          continue;
+        }
+
+        children.push(new ExternalHyperlink({
+          link,
+          children: linkChildren.length > 0
+            ? linkChildren
+            : createDocxTextRuns(link, { ...style, hyperlink: true }),
+        }));
+        continue;
+      }
+      case "image":
+        children.push(...await resolveDocxImageChildren(token, context));
+        continue;
+      case "br":
+        children.push(new TextRun({ break: 1 }));
+        continue;
+      case "html": {
+        const text = stripHtml(token.raw ?? token.text ?? "");
+        children.push(...createDocxTextRuns(text, style));
+        continue;
+      }
+      default: {
+        if (token.tokens?.length) {
+          children.push(...await renderDocxInlineTokens(token.tokens, context, style));
+          continue;
+        }
+
+        const text = token.text ?? token.raw ?? "";
+        children.push(...createDocxTextRuns(text, style));
+      }
+    }
+  }
+
+  return children;
+}
+
+/**
+ * @param {string} text
+ * @param {DocxInlineStyle} [style]
+ * @returns {InstanceType<typeof TextRun>[]}
+ */
+function createDocxTextRuns(text, style = {}) {
+  if (!text) return [];
+
+  const segments = text.split("\n");
+  const runs = [];
+
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    if (segment) {
+      runs.push(new TextRun(buildDocxTextRunOptions(segment, style)));
+    }
+
+    if (index < segments.length - 1) {
+      runs.push(new TextRun({ break: 1 }));
+    }
+  }
+
+  return runs;
+}
+
+/**
+ * @param {string} text
+ * @param {DocxInlineStyle} style
+ * @returns {ConstructorParameters<typeof TextRun>[0]}
+ */
+function buildDocxTextRunOptions(text, style) {
+  const options = {
+    text,
+    bold: style.bold,
+    italics: style.italic,
+    strike: style.strike,
+  };
+
+  if (style.code) {
+    options.font = "Courier New";
+    options.size = 19;
+  }
+
+  if (style.hyperlink) {
+    options.style = "Hyperlink";
+  }
+
+  return options;
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<(InstanceType<typeof TextRun> | InstanceType<typeof ImageRun> | InstanceType<typeof ExternalHyperlink>)[]>}
+ */
+async function resolveDocxImageChildren(token, context) {
+  const imageAsset = await loadDocxImageAsset(token, context);
+  if (!imageAsset) {
+    return createDocxImageFallbackChildren(token);
+  }
+
+  return [new ImageRun({
+    type: imageAsset.type,
+    data: imageAsset.data,
+    transformation: scaleDocxImage(imageAsset.width, imageAsset.height, context.indentTwips),
+    altText: {
+      name: imageAsset.label,
+      description: imageAsset.label,
+      title: imageAsset.label,
+    },
+  })];
+}
+
+/**
+ * @param {PdfToken} token
+ * @param {DocxRenderContext} context
+ * @returns {Promise<{ type: "jpg" | "png" | "gif" | "bmp"; data: Buffer; width: number; height: number; label: string } | null>}
+ */
+async function loadDocxImageAsset(token, context) {
+  const href = stripImageHref(token.href ?? "");
+  const label = (token.text ?? token.href ?? "image").trim() || "image";
+  if (!href) return null;
+
+  if (href.startsWith("data:")) {
+    return createDocxImageAssetFromDataUrl(href, label);
+  }
+
+  if (isExternalHref(href)) {
+    return await fetchDocxImageAsset(normalizeExternalHref(href), label);
+  }
+
+  const imagePath = await resolvePdfImageSource(context.rootPath, context.sourcePath, href);
+  if (!imagePath) return null;
+
+  const imageBuffer = Buffer.from(await Bun.file(imagePath).arrayBuffer());
+  return createDocxImageAsset(imageBuffer, {
+    label,
+    extension: path.extname(imagePath),
+  });
+}
+
+/**
+ * @param {string} href
+ * @param {string} label
+ * @returns {Promise<{ type: "jpg" | "png" | "gif" | "bmp"; data: Buffer; width: number; height: number; label: string } | null>}
+ */
+async function fetchDocxImageAsset(href, label) {
+  let response;
+
+  try {
+    response = await fetch(href, {
+      signal: AbortSignal.timeout(DOCX_IMAGE_FETCH_TIMEOUT_MS),
+    });
+  } catch {
+    return null;
+  }
+
+  if (!response.ok) return null;
+
+  const imageBuffer = Buffer.from(await response.arrayBuffer());
+  return createDocxImageAsset(imageBuffer, {
+    label,
+    contentType: response.headers.get("content-type"),
+    extension: path.extname(new URL(href).pathname),
+  });
+}
+
+/**
+ * @param {string} href
+ * @param {string} label
+ * @returns {{ type: "jpg" | "png" | "gif" | "bmp"; data: Buffer; width: number; height: number; label: string } | null}
+ */
+function createDocxImageAssetFromDataUrl(href, label) {
+  const match = href.match(/^data:([^;,]+)?((?:;[^;,=]+=[^;,]*)*)(;base64)?,([\s\S]*)$/i);
+  if (!match) return null;
+
+  const mediaType = match[1] ?? null;
+  const isBase64 = Boolean(match[3]);
+  const body = match[4] ?? "";
+
+  let imageBuffer;
+  try {
+    imageBuffer = isBase64
+      ? Buffer.from(body, "base64")
+      : Buffer.from(decodeURIComponent(body), "utf8");
+  } catch {
+    return null;
+  }
+
+  return createDocxImageAsset(imageBuffer, {
+    label,
+    contentType: mediaType,
+  });
+}
+
+/**
+ * @param {Buffer} imageBuffer
+ * @param {{ label: string; contentType?: string | null; extension?: string }} input
+ * @returns {{ type: "jpg" | "png" | "gif" | "bmp"; data: Buffer; width: number; height: number; label: string } | null}
+ */
+function createDocxImageAsset(imageBuffer, input) {
+  const type = detectDocxImageType(imageBuffer, input);
+  if (!type) return null;
+
+  const size = detectDocxImageSize(imageBuffer, type);
+  if (!size) return null;
+  if (size.width < 1 || size.height < 1) return null;
+
+  return {
+    type,
+    data: imageBuffer,
+    width: size.width,
+    height: size.height,
+    label: input.label,
+  };
+}
+
+/**
+ * @param {Buffer} imageBuffer
+ * @param {{ contentType?: string | null; extension?: string }} input
+ * @returns {"jpg" | "png" | "gif" | "bmp" | null}
+ */
+function detectDocxImageType(imageBuffer, input) {
+  if (imageBuffer.length >= 8
+    && imageBuffer[0] === 0x89
+    && imageBuffer[1] === 0x50
+    && imageBuffer[2] === 0x4e
+    && imageBuffer[3] === 0x47
+    && imageBuffer[4] === 0x0d
+    && imageBuffer[5] === 0x0a
+    && imageBuffer[6] === 0x1a
+    && imageBuffer[7] === 0x0a) {
+    return "png";
+  }
+
+  if (imageBuffer.length >= 3
+    && imageBuffer[0] === 0xff
+    && imageBuffer[1] === 0xd8
+    && imageBuffer[2] === 0xff) {
+    return "jpg";
+  }
+
+  if (imageBuffer.length >= 6) {
+    const signature = imageBuffer.subarray(0, 6).toString("ascii");
+    if (signature === "GIF87a" || signature === "GIF89a") {
+      return "gif";
+    }
+  }
+
+  if (imageBuffer.length >= 2 && imageBuffer[0] === 0x42 && imageBuffer[1] === 0x4d) {
+    return "bmp";
+  }
+
+  const normalizedContentType = input.contentType?.split(";")[0].trim().toLowerCase() ?? "";
+  if (normalizedContentType === "image/png") return "png";
+  if (normalizedContentType === "image/jpeg" || normalizedContentType === "image/jpg") return "jpg";
+  if (normalizedContentType === "image/gif") return "gif";
+  if (normalizedContentType === "image/bmp") return "bmp";
+
+  const extension = input.extension?.toLowerCase() ?? "";
+  if (extension === ".png") return "png";
+  if (extension === ".jpg" || extension === ".jpeg") return "jpg";
+  if (extension === ".gif") return "gif";
+  if (extension === ".bmp") return "bmp";
+
+  return null;
+}
+
+/**
+ * @param {Buffer} imageBuffer
+ * @param {"jpg" | "png" | "gif" | "bmp"} type
+ * @returns {{ width: number; height: number } | null}
+ */
+function detectDocxImageSize(imageBuffer, type) {
+  switch (type) {
+    case "png":
+      if (imageBuffer.length < 24) return null;
+      return {
+        width: imageBuffer.readUInt32BE(16),
+        height: imageBuffer.readUInt32BE(20),
+      };
+    case "gif":
+      if (imageBuffer.length < 10) return null;
+      return {
+        width: imageBuffer.readUInt16LE(6),
+        height: imageBuffer.readUInt16LE(8),
+      };
+    case "bmp":
+      if (imageBuffer.length < 26) return null;
+      return {
+        width: Math.abs(imageBuffer.readInt32LE(18)),
+        height: Math.abs(imageBuffer.readInt32LE(22)),
+      };
+    case "jpg":
+      return detectJpegImageSize(imageBuffer);
+    default:
+      return null;
+  }
+}
+
+/**
+ * @param {Buffer} imageBuffer
+ * @returns {{ width: number; height: number } | null}
+ */
+function detectJpegImageSize(imageBuffer) {
+  if (imageBuffer.length < 4 || imageBuffer[0] !== 0xff || imageBuffer[1] !== 0xd8) {
+    return null;
+  }
+
+  let offset = 2;
+
+  while (offset + 1 < imageBuffer.length) {
+    while (offset < imageBuffer.length && imageBuffer[offset] !== 0xff) {
+      offset += 1;
+    }
+
+    while (offset < imageBuffer.length && imageBuffer[offset] === 0xff) {
+      offset += 1;
+    }
+
+    if (offset >= imageBuffer.length) return null;
+
+    const marker = imageBuffer[offset];
+    offset += 1;
+
+    if (marker === 0xd9 || marker === 0xda) {
+      return null;
+    }
+
+    if (offset + 1 >= imageBuffer.length) {
+      return null;
+    }
+
+    const segmentLength = imageBuffer.readUInt16BE(offset);
+    if (segmentLength < 2 || offset + segmentLength > imageBuffer.length) {
+      return null;
+    }
+
+    const isStartOfFrame = marker >= 0xc0
+      && marker <= 0xcf
+      && marker !== 0xc4
+      && marker !== 0xc8
+      && marker !== 0xcc;
+
+    if (isStartOfFrame) {
+      if (segmentLength < 7) return null;
+
+      return {
+        height: imageBuffer.readUInt16BE(offset + 3),
+        width: imageBuffer.readUInt16BE(offset + 5),
+      };
+    }
+
+    offset += segmentLength;
+  }
+
+  return null;
+}
+
+/**
+ * @param {number} width
+ * @param {number} height
+ * @param {number} indentTwips
+ * @returns {{ width: number; height: number }}
+ */
+function scaleDocxImage(width, height, indentTwips) {
+  const indentPixels = Math.max(0, Math.round(indentTwips / 15));
+  const maxWidth = Math.max(160, DOCX_MAX_IMAGE_WIDTH_PX - indentPixels);
+  const maxHeight = DOCX_MAX_IMAGE_HEIGHT_PX;
+  const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
+}
+
+/**
+ * @param {PdfToken} token
+ * @returns {(InstanceType<typeof TextRun> | InstanceType<typeof ExternalHyperlink>)[]}
+ */
+function createDocxImageFallbackChildren(token) {
+  const imageLabel = (token.text ?? token.href ?? "image").trim() || "image";
+  const href = token.href?.trim();
+
+  if (!href) {
+    return [new TextRun({ text: `[image: ${imageLabel}]`, italics: true })];
+  }
+
+  if (isExternalHref(href)) {
+    return [
+      new TextRun({ text: "[image: " }),
+      new ExternalHyperlink({
+        link: normalizeExternalHref(href),
+        children: [new TextRun({ text: imageLabel, style: "Hyperlink" })],
+      }),
+      new TextRun({ text: "]" }),
+    ];
+  }
+
+  return [new TextRun({
+    text: `[image: ${imageLabel} → ${href}]`,
+    italics: true,
+  })];
+}
+
+/**
+ * @param {string} href
+ * @returns {boolean}
+ */
+function isExternalHref(href) {
+  return href.startsWith("//") || /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(href);
+}
+
+/**
+ * @param {string} href
+ * @returns {string}
+ */
+function normalizeExternalHref(href) {
+  return href.startsWith("//") ? `https:${href}` : href;
+}
+
+/**
+ * @param {{ [key: string]: unknown }} options
+ * @param {DocxRenderContext} context
+ * @returns {{ [key: string]: unknown }}
+ */
+function applyDocxContextIndent(options, context) {
+  if (context.indentTwips <= 0) return options;
+
+  return {
+    ...options,
+    indent: {
+      ...(typeof options.indent === "object" && options.indent ? options.indent : {}),
+      left: Number(typeof options.indent === "object" && options.indent && "left" in options.indent ? options.indent.left ?? 0 : 0) + context.indentTwips,
+    },
+  };
+}
+
+/**
+ * @param {string | null} align
+ * @returns {(typeof AlignmentType)[keyof typeof AlignmentType] | undefined}
+ */
+function toDocxAlignment(align) {
+  switch (align) {
+    case "center":
+      return AlignmentType.CENTER;
+    case "right":
+      return AlignmentType.RIGHT;
+    case "justify":
+      return AlignmentType.JUSTIFIED;
+    case "left":
+      return AlignmentType.LEFT;
+    default:
+      return undefined;
+  }
 }
 
 /**
@@ -2494,13 +3447,30 @@ function stripHtml(value) {
  * @returns {string}
  */
 function buildPdfFilename(relativePath) {
+  return buildDocumentFilename(relativePath, "pdf");
+}
+
+/**
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function buildDocxFilename(relativePath) {
+  return buildDocumentFilename(relativePath, "docx");
+}
+
+/**
+ * @param {string} relativePath
+ * @param {string} extension
+ * @returns {string}
+ */
+function buildDocumentFilename(relativePath, extension) {
   const title = toFileTitle(relativePath)
     .normalize("NFKD")
     .replace(/[^\w.-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return `${title || "document"}.pdf`;
+  return `${title || "document"}.${extension}`;
 }
 
 /**
@@ -2580,6 +3550,17 @@ function formatTimestamp(date) {
 }
 
 /**
+ * Apply mdview-specific HTML transforms to rendered Markdown.
+ * @param {string} html
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function transformRenderedHtml(html, relativePath) {
+  const withMermaid = transformMermaidBlocks(html);
+  return rewriteRenderedHtmlUrls(withMermaid, relativePath);
+}
+
+/**
  * Convert <pre><code class="language-mermaid">...</code></pre> blocks into
  * <div class="mermaid">...</div> so Mermaid.js can render them client-side.
  * @param {string} html
@@ -2590,6 +3571,120 @@ function transformMermaidBlocks(html) {
     /<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
     (_match, content) => `<div class="mermaid">${unescapeMinimalHtmlEntities(content)}</div>`,
   );
+}
+
+/**
+ * Rewrite relative asset and markdown links so they work under /view/... routes.
+ * @param {string} html
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function rewriteRenderedHtmlUrls(html, relativePath) {
+  const rewrittenAnchors = html.replace(
+    /(<a\b[^>]*\bhref=)(["'])(.*?)\2/gi,
+    (_match, prefix, quote, value) => `${prefix}${quote}${escapeHtmlAttribute(rewriteRenderedLinkUrl(value, relativePath))}${quote}`,
+  );
+
+  return rewrittenAnchors.replace(
+    /(<(?:img|source|video|audio)\b[^>]*\bsrc=)(["'])(.*?)\2/gi,
+    (_match, prefix, quote, value) => `${prefix}${quote}${escapeHtmlAttribute(rewriteRenderedAssetUrl(value, relativePath))}${quote}`,
+  );
+}
+
+/**
+ * @param {string} value
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function rewriteRenderedLinkUrl(value, relativePath) {
+  return rewriteRenderedUrl(value, relativePath, "link");
+}
+
+/**
+ * @param {string} value
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function rewriteRenderedAssetUrl(value, relativePath) {
+  return rewriteRenderedUrl(value, relativePath, "asset");
+}
+
+/**
+ * @param {string} value
+ * @param {string} relativePath
+ * @param {"link" | "asset"} kind
+ * @returns {string}
+ */
+function rewriteRenderedUrl(value, relativePath, kind) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return value;
+  if (shouldBypassRenderedUrlRewrite(trimmedValue)) return trimmedValue;
+
+  const { pathname, search, hash } = splitHref(trimmedValue);
+  if (!pathname) return trimmedValue;
+
+  const resolvedPath = resolveRenderedRoutePath(pathname, relativePath);
+  if (!resolvedPath) return trimmedValue;
+
+  if (kind === "link" && isMarkdownFile(resolvedPath)) {
+    return `/view/${encodeRoutePath(resolvedPath)}${search}${hash}`;
+  }
+
+  return `/${encodeRoutePath(resolvedPath)}${search}${hash}`;
+}
+
+/**
+ * @param {string} value
+ * @returns {boolean}
+ */
+function shouldBypassRenderedUrlRewrite(value) {
+  return value.startsWith("#")
+    || value.startsWith("?")
+    || value.startsWith("//")
+    || /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
+}
+
+/**
+ * @param {string} value
+ * @returns {{ pathname: string; search: string; hash: string }}
+ */
+function splitHref(value) {
+  let pathname = value;
+  let search = "";
+  let hash = "";
+
+  const hashIndex = pathname.indexOf("#");
+  if (hashIndex >= 0) {
+    hash = pathname.slice(hashIndex);
+    pathname = pathname.slice(0, hashIndex);
+  }
+
+  const searchIndex = pathname.indexOf("?");
+  if (searchIndex >= 0) {
+    search = pathname.slice(searchIndex);
+    pathname = pathname.slice(0, searchIndex);
+  }
+
+  return { pathname, search, hash };
+}
+
+/**
+ * @param {string} targetPath
+ * @param {string} relativePath
+ * @returns {string | null}
+ */
+function resolveRenderedRoutePath(targetPath, relativePath) {
+  const posixPath = path.posix;
+  const normalizedTargetPath = decodeRoutePath(targetPath) ?? targetPath;
+
+  const candidate = normalizedTargetPath.startsWith("/")
+    ? posixPath.normalize(normalizedTargetPath.slice(1))
+    : posixPath.normalize(posixPath.join(posixPath.dirname(relativePath), normalizedTargetPath));
+
+  if (!candidate || candidate === ".") return null;
+  if (candidate === ".." || candidate.startsWith("../")) return null;
+
+  return candidate;
 }
 
 /**
@@ -2617,6 +3712,14 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeHtmlAttribute(value) {
+  return escapeHtml(value);
 }
 
 /**
