@@ -20,6 +20,8 @@
     pkgs.jq
     pkgs.aria2
     pkgs.unzip
+    pkgs.p7zip
+    pkgs.jdk17_headless
 
     # OpenAI Codex CLI from external flake input
     # Use the flake's package matching our system

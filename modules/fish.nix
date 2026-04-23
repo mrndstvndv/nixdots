@@ -36,6 +36,7 @@
         set --export UV_CACHE_DIR "/Volumes/realme/.cache/uv"
         set --export GRADLE_USER_HOME "/Volumes/realme/.gradle"
         set --export BUN_INSTALL "/Volumes/realme/.bun"
+        set --export ANDROID_HOME "/Volumes/realme/Dev/AndroidSdk"
         fish_add_path --prepend "/Volumes/realme/.bun/bin"
       end
 
