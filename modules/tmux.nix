@@ -60,6 +60,7 @@ in
 
       # toggle lazygit pane in current directory
       bind-key l display-popup -E -d "#{pane_current_path}" -w 90% -h 90% "lazygit"
+      bind-key t display-popup -E -d "#{pane_current_path}" -w 90% -h 90% "wt exit"
 
       # open new windows in current path
       # Use -a to insert the new window after the current window (avoids

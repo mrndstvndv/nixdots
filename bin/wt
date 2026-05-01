@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+
+# Determine the best place to store worktrees based on OS standards
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS Standard: Application Support
+    DEFAULT_ROOT="$HOME/Library/Application Support/worktree-tui"
+else
+    # Unix Standard: XDG Data Home
+    DEFAULT_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/worktree-tui"
+fi
+
+WT_ROOT="${WT_ROOT:-$DEFAULT_ROOT}"
+mkdir -p "$WT_ROOT"
+
+# Get the absolute path of the current git root to use as a unique project ID
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "$REPO_ROOT" ]; then
+    echo "Error: Not in a git repository."
+    exit 1
+fi
+
+# Sanitize path: Replace slashes with dashes and remove leading slash
+PROJECT_ID=$(echo "$REPO_ROOT" | sed 's/^\///' | sed 's/\//-/g')
+PROJECT_WT_DIR="$WT_ROOT/$PROJECT_ID"
+
+# Get list of existing worktrees for THIS project only
+# Format: name <TAB> full_path
+worktrees=$(git worktree list --porcelain | grep "^worktree " | cut -d' ' -f2- | while read -r p; do
+    printf "%s\t%s\n" "$(basename "$p")" "$p"
+done)
+
+# Use fzf to select or type a new name
+# Use Tab as delimiter and show only the first field
+FZF_OUT=$(mktemp)
+echo "$worktrees" | fzf \
+    --print-query \
+    --delimiter '\t' \
+    --with-nth 1 \
+    --header "Project: $PROJECT_ID | Enter: Switch | Type Name + Enter: Create" \
+    --prompt "Worktree: " > "$FZF_OUT"
+
+# Read result and remove temp file
+query=$(sed -n '1p' "$FZF_OUT")
+selection=$(sed -n '2p' "$FZF_OUT")
+rm "$FZF_OUT"
+
+if [ -z "$query" ] && [ -z "$selection" ]; then
+    exit 0
+fi
+
+if [ -n "$selection" ]; then
+    # Extract the path (the 2nd field after the tab)
+    path=$(echo "$selection" | cut -f2)
+    
+    if [ "$(realpath "$path")" == "$(realpath "$(pwd)")" ]; then
+        exit 0
+    fi
+
+    if [ -n "$TMUX" ]; then
+        tmux new-window -c "$path" || tmux display-message "Failed to open window at $path"
+        exit 0
+    else
+        cd "$path" && exec $SHELL
+    fi
+else
+    # CREATION PATH
+    [ -z "$query" ] && exit 0
+
+    mkdir -p "$PROJECT_WT_DIR"
+    target_path="$PROJECT_WT_DIR/$query"
+    
+    if [ -d "$target_path" ]; then
+        tmux display-message "Error: Directory exists: $target_path"
+        exit 1
+    fi
+
+    if git worktree add "$target_path" -b "$query" >/dev/null 2>&1; then
+        if [ -n "$TMUX" ]; then
+            tmux new-window -c "$target_path"
+            exit 0
+        else
+            cd "$target_path" && exec $SHELL
+        fi
+    else
+        tmux display-message "Error: Failed to create worktree '$query'"
+        exit 1
+    fi
+fi
