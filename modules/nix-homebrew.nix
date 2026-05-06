@@ -50,12 +50,12 @@
       "codex-app"
       "obs"
       "android-studio"
+      "kotlin-lsp"
     ];
 
     brews = [
       "smctemp"
       "jadx"
-      # "kotlin-lsp"
     ];
   };
 }
