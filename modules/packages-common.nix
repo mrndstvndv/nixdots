@@ -11,16 +11,15 @@
     pkgs.uv
     pkgs.fzf
     pkgs.zoxide
-    pkgs.cursor-cli
     pkgs.ffmpeg
     pkgs.android-tools
     pkgs.htop
-    pkgs.jujutsu
     pkgs.nodejs_24
     pkgs.jq
     pkgs.aria2
     pkgs.unzip
     pkgs.p7zip
+    pkgs.neovim
     pkgs.jdk17_headless
 
     # OpenAI Codex CLI from external flake input

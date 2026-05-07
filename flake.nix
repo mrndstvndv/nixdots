@@ -8,7 +8,6 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    my-neovim.url = "github:crimera/nvim.config";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     homebrew-core = {
       url = "github:homebrew/homebrew-core";
@@ -42,7 +41,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, my-neovim, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
    let
       supportedStandaloneHomeSystems = [
         "aarch64-linux"
@@ -79,7 +78,7 @@
       mkStandaloneHomeConfiguration = system:
         home-manager.lib.homeManagerConfiguration {
           pkgs = nixpkgs.legacyPackages.${system};
-          extraSpecialArgs = { inherit my-neovim codex piAgent; };
+          extraSpecialArgs = { inherit codex piAgent; };
           modules = [
             ./alpine/home.nix
             {
@@ -136,7 +135,7 @@
            shell = pkgs.fish;
          };
          home-manager.useGlobalPkgs = true;
-         home-manager.extraSpecialArgs = { inherit (inputs) my-neovim codex; inherit piAgent; };
+         home-manager.extraSpecialArgs = { inherit (inputs) codex; inherit piAgent; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [
@@ -178,7 +177,7 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#proputer
     darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit home-manager; inherit (inputs) my-neovim homebrew-nix homebrew-core homebrew-cask homebrew-smctemp codex; };
+      specialArgs = { inherit home-manager; inherit (inputs) homebrew-nix homebrew-core homebrew-cask homebrew-smctemp codex; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
@@ -195,9 +194,9 @@
     nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
       pkgs = import nixpkgs { system = "aarch64-linux"; };
       modules = [
-        # Inject flake input my-neovim into _module.args, so all
-        # nix-on-droid modules (including HM) can see it.
-        { _module.args.my-neovim = my-neovim; _module.args.piAgent = piAgent; }
+        # Inject flake inputs into _module.args, so all
+        # nix-on-droid modules (including HM) can see them.
+        { _module.args.piAgent = piAgent; }
         ./nix-on-droid/system.nix
       ];
     };

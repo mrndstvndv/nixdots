@@ -1,4 +1,4 @@
-{ pkgs, my-neovim, piAgent ? null, lib, ... }:
+{ pkgs, piAgent ? null, lib, ... }:
 {
   imports =
     lib.optionals (piAgent != null) [
@@ -7,7 +7,6 @@
     ++ [
       ../modules/fish.nix
       ../modules/tmux.nix
-      ../modules/neovim.nix
       ../modules/packages-common.nix
       ../modules/packages-gui.nix
     ];
