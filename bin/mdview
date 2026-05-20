@@ -231,6 +231,11 @@ img {
   z-index: 20;
   border-bottom: 1px solid var(--border);
   background: var(--page-bg);
+  transition: transform 0.2s ease-in-out;
+}
+
+.top-nav.nav-hidden {
+  transform: translateY(-100%);
 }
 
 .shell,
@@ -1519,6 +1524,39 @@ function renderDocument(input) {
     <script>hljs.highlightAll();</script>
     ${mermaidScript}
     ${autoPrintScript}
+    <script>
+      (function() {
+        let lastScrollY = window.scrollY;
+        const topNav = document.querySelector('.top-nav');
+        if (!topNav) return;
+        const threshold = 10;
+
+        window.addEventListener('scroll', () => {
+          if (!window.matchMedia('(max-width: 767px)').matches) {
+            topNav.classList.remove('nav-hidden');
+            return;
+          }
+
+          const currentScrollY = window.scrollY;
+          const maxScrollY = document.documentElement.scrollHeight - window.innerHeight;
+          
+          if (currentScrollY < 0 || currentScrollY > maxScrollY) {
+            return;
+          }
+
+          if (currentScrollY <= 50) {
+            topNav.classList.remove('nav-hidden');
+          } else if (Math.abs(currentScrollY - lastScrollY) > threshold) {
+            if (currentScrollY > lastScrollY) {
+              topNav.classList.add('nav-hidden');
+            } else {
+              topNav.classList.remove('nav-hidden');
+            }
+            lastScrollY = currentScrollY;
+          }
+        });
+      })();
+    </script>
   </body>
 </html>`;
 }
