@@ -1,4 +1,4 @@
-{ config, homebrew-core, homebrew-cask, homebrew-smctemp, ... }:
+{ config, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-omlx, ... }:
 {
   nix-homebrew = {
     enable = true;
@@ -14,6 +14,7 @@
       "homebrew/homebrew-core" = homebrew-core;
       "homebrew/homebrew-cask" = homebrew-cask;
       "narugit/homebrew-tap" = homebrew-smctemp;
+      "jundot/omlx" = homebrew-omlx;
     };
 
     # Disable mutable taps - only manage taps via nix config
@@ -57,6 +58,7 @@
       "smctemp"
       "jadx"
       "ripgrep"
+      "omlx"
     ];
   };
 }

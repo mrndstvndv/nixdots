@@ -21,6 +21,10 @@
       url = "github:narugit/homebrew-tap";
       flake = false;
     };
+    homebrew-omlx = {
+      url = "github:jundot/omlx";
+      flake = false;
+    };
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -177,7 +181,7 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#proputer
     darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit home-manager; inherit (inputs) homebrew-nix homebrew-core homebrew-cask homebrew-smctemp codex; };
+      specialArgs = { inherit home-manager; inherit (inputs) homebrew-nix homebrew-core homebrew-cask homebrew-smctemp homebrew-omlx codex; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
