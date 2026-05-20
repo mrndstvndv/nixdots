@@ -3,6 +3,9 @@
 {
   programs.fish = {
     enable = true;
+    shellAliases = {
+      agy = "~/.local/bin/agy";
+    };
     interactiveShellInit = ''
       fish_vi_key_bindings
       bind -M insert \cr history-pager
