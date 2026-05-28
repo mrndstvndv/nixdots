@@ -1,4 +1,4 @@
-{ config, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-omlx, ... }:
+{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, ... }:
 {
   nix-homebrew = {
     enable = true;
@@ -14,11 +14,12 @@
       "homebrew/homebrew-core" = homebrew-core;
       "homebrew/homebrew-cask" = homebrew-cask;
       "narugit/homebrew-tap" = homebrew-smctemp;
-      "jundot/omlx" = homebrew-omlx;
     };
 
-    # Disable mutable taps - only manage taps via nix config
-    mutableTaps = false;
+    # Enable mutable taps so brew can create the correct
+    # homebrew-repo directory name for taps not following the
+    # homebrew-* naming convention (e.g. jundot/omlx).
+    mutableTaps = true;
   };
 
   # Homebrew configuration
@@ -29,8 +30,15 @@
     # User owning the Homebrew installation
     user = "steven";
 
-    # Sync taps with nix-homebrew.taps to avoid mismatches
-    taps = builtins.attrNames config.nix-homebrew.taps;
+    # Sync taps with nix-homebrew.taps, but use clone_target for
+    # taps whose GitHub repo doesn't follow the homebrew- naming
+    # convention (nix-homebrew creates wrong directory names for those).
+    taps = (builtins.map (name: { inherit name; }) (
+      builtins.attrNames config.nix-homebrew.taps
+    )) ++ [{
+      name = "jundot/omlx";
+      clone_target = "https://github.com/jundot/omlx";
+    }];
 
     # Lifecycle automation
     onActivation = {
