@@ -183,7 +183,7 @@
         ./modules/nix-homebrew.nix
         neru.darwinModules.default
         { nixpkgs.overlays = [ neru.overlays.default androidCliOverlay ]; }
-        { services.neru.enable = true; }
+        { services.neru.enable = true; services.neru.configFile = ./modules/neru-config.toml; }
         configuration 
       ];
     };

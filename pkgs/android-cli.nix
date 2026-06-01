@@ -3,7 +3,7 @@ let
   sources = {
     aarch64-darwin = {
       url = "https://dl.google.com/android/cli/latest/darwin_arm64/android";
-      hash = "sha256-Af0vUXVs8/+0iXOfg8uCsubm/6mo64/mzrISJOm6eYk=";
+      hash = "sha256-KIwoqDAj+ywjhdyfftRJfT7305ERITvNtMswqT0CQ/w=";
     };
 
     x86_64-linux = {
