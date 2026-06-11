@@ -5,6 +5,7 @@
     enable = true;
     shellAliases = {
       agy = "~/.local/bin/agy";
+      gci = "git clone --depth 1";
     };
     interactiveShellInit = ''
       fish_vi_key_bindings
