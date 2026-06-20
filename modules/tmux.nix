@@ -80,6 +80,8 @@ in
 
       # rename window with Ctrl+b r
       bind-key r command-prompt -I "#W" "rename-window '%%'"
+      # rename session with Ctrl+b R
+      bind-key R command-prompt -I "#S" "rename-session '%%'"
 
       set-window-option -g automatic-rename on
       # Show current command if running (unless it's a shell), otherwise show directory basename
