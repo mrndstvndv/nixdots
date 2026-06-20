@@ -66,6 +66,7 @@ in
       # Use -a to insert the new window after the current window (avoids
       # re-used numeric ids causing windows to appear in the middle).
       bind-key c new-window -a -c "#{pane_current_path}"
+      bind-key N new-session
       # bind -n C-t new-window -c "#{pane_current_path}"
       bind -n C-w kill-window
 
