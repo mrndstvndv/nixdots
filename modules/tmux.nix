@@ -82,9 +82,8 @@ in
       bind-key r command-prompt -I "#W" "rename-window '%%'"
 
       set-window-option -g automatic-rename on
-      # Show current command if running, otherwise path
-      # Show path if set, otherwise show command
-      set-window-option -g automatic-rename-format '#{?#{b:pane_current_path},#{b:pane_current_path},#{pane_current_command}}'
+      # Show current command if running (unless it's a shell), otherwise show directory basename
+      set-window-option -g automatic-rename-format '#{?#{m|r:^(fish|zsh|bash|sh)$,#{pane_current_command}},#{b:pane_current_path},#{pane_current_command}}'
     '';
   };
 }
