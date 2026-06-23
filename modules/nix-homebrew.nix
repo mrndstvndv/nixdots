@@ -64,6 +64,7 @@
     ];
 
     brews = [
+      "herdr"
       "smctemp"
       "jadx"
       "ripgrep"

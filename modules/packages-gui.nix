@@ -3,6 +3,7 @@
   imports = [
   ./ghostty.nix
   ./alacritty.nix
+  ./herdr.nix
 ];
 
   home.packages = [
