@@ -50,6 +50,7 @@
     # Install OrbStack via Homebrew
     # OrbStack is pinned by default (no greedy/auto-updates)
     casks = [
+      "alacritty"
       "orbstack"
       "crossover"
       "antigravity"

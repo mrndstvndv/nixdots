@@ -1,6 +1,9 @@
 { pkgs, ... }:
 {
-  imports = [ ./ghostty.nix ];
+  imports = [
+  ./ghostty.nix
+  ./alacritty.nix
+];
 
   home.packages = [
     # pkgs.mpv  # Using Homebrew instead to avoid building Swift
