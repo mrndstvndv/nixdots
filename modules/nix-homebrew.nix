@@ -18,7 +18,7 @@
 
     # Enable mutable taps so brew can create the correct
     # homebrew-repo directory name for taps not following the
-    # homebrew-* naming convention (e.g. jundot/omlx).
+    # homebrew-* naming convention.
     mutableTaps = true;
   };
 
@@ -35,10 +35,7 @@
     # convention (nix-homebrew creates wrong directory names for those).
     taps = (builtins.map (name: { inherit name; }) (
       builtins.attrNames config.nix-homebrew.taps
-    )) ++ [{
-      name = "jundot/omlx";
-      clone_target = "https://github.com/jundot/omlx";
-    }];
+    ));
 
     # Lifecycle automation
     onActivation = {
@@ -68,7 +65,6 @@
       "smctemp"
       "jadx"
       "ripgrep"
-      "omlx"
     ];
   };
 }
