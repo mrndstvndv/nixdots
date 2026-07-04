@@ -58,6 +58,7 @@
       "obs"
       "android-studio"
       "kotlin-lsp"
+      "brave-browser@nightly"
     ];
 
     brews = [
