@@ -21,6 +21,7 @@
     pkgs.p7zip
     pkgs.neovim
     pkgs.jdk17_headless
+    pkgs.cargo
 
     # OpenAI Codex CLI from external flake input
     # Use the flake's package matching our system
