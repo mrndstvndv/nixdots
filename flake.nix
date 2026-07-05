@@ -147,7 +147,11 @@
          # List packages installed in system profile. To search by name, run:
          # $ nix-env -qaP | grep wget
          environment.systemPackages = [];
-         environment.systemPath = [ "/nix/var/nix/profiles/default/bin" ];
+          environment.systemPath = [
+            "/nix/var/nix/profiles/default/bin"
+            "/opt/homebrew/bin"
+          ];
+
 
       # For darwin-nix to work on determinate nix
       nix.enable = false;
