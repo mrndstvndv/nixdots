@@ -47,18 +47,16 @@
     # Install OrbStack via Homebrew
     # OrbStack is pinned by default (no greedy/auto-updates)
     casks = [
-      "alacritty"
       "orbstack"
       "crossover"
       "antigravity"
       "proton-pass"
       "protonvpn"
       "mpv"
-      "codex-app"
       "obs"
-      "android-studio"
       "brave-browser@nightly"
       "steam"
+      "localsend"
     ];
 
     brews = [
