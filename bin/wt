@@ -23,27 +23,138 @@ fi
 PROJECT_ID=$(echo "$REPO_ROOT" | sed 's/^\///' | sed 's/\//-/g')
 PROJECT_WT_DIR="$WT_ROOT/$PROJECT_ID"
 
+# Log file for debugging
+LOG_FILE="/tmp/wt-$$.log"
+log() { echo "[$(date '+%H:%M:%S')] $*" >> "$LOG_FILE"; }
+touch "$LOG_FILE"
+log "=== wt start ==="
+log "REPO_ROOT=$REPO_ROOT"
+log "PROJECT_ID=$PROJECT_ID"
+
 # Get list of existing worktrees for THIS project only
-# Format: name <TAB> full_path
-worktrees=$(git worktree list --porcelain | grep "^worktree " | cut -d' ' -f2- | while read -r p; do
-    printf "%s\t%s\n" "$(basename "$p")" "$p"
-done)
+# Format: name <TAB> path <TAB> branch
+worktrees=$(git worktree list --porcelain | awk -v RS= -v FS='\n' '
+/worktree / {
+    path = ""
+    branch = ""
+    for (i = 1; i <= NF; i++) {
+        if ($i ~ /^worktree /) {
+            path = substr($i, 10)
+        }
+        if ($i ~ /^branch /) {
+            branch = substr($i, 8)
+            sub("^refs/heads/", "", branch)
+        }
+    }
+    if (path) {
+        name = path
+        sub(".*/", "", name)
+        printf "%s\t%s\t%s\n", name, path, branch
+    }
+}')
+log "worktrees: $(echo "$worktrees" | awk '{printf "[%s]", $0}')"
+
+# Delete a worktree: remove git worktree, branch, and managed directory
+delete_worktree() {
+    local name="$1"
+    local path="$2"
+    local branch="$3"
+    local rc=0
+
+    log "delete_worktree: name=$name path=$path branch=$branch"
+    echo "Deleting worktree: $name"
+
+    # Don't let users delete the active worktree or main repo
+    if [ "$(realpath "$path" 2>/dev/null)" = "$(realpath "$(pwd)" 2>/dev/null)" ] || [ "$(realpath "$path" 2>/dev/null)" = "$(realpath "$REPO_ROOT" 2>/dev/null)" ]; then
+        log "ERROR: attempted to delete active worktree"
+        echo "Error: Cannot delete the active worktree"
+        sleep 2
+        return 1
+    fi
+
+    # Remove git worktree (force if clean removal fails)
+    if git worktree remove "$path" 2>/dev/null; then
+        echo "✓ Git worktree removed"
+        log "git worktree remove ok: $path"
+    else
+        echo "Clean remove failed, attempting force remove..."
+        if git worktree remove --force "$path" 2>>"$LOG_FILE"; then
+            echo "✓ Git worktree removed (forced)"
+            log "git worktree remove --force ok: $path"
+        else
+            log "ERROR: git worktree remove failed: $path"
+            rc=1
+        fi
+    fi
+
+    # Delete the branch if we have one
+    if [ -n "$branch" ]; then
+        if git branch -D "$branch" 2>>"$LOG_FILE"; then
+            echo "✓ Branch '$branch' deleted"
+            log "git branch -D ok: $branch"
+        else
+            log "ERROR: git branch -D failed: $branch"
+        fi
+    fi
+
+    # Remove managed worktree directory if it exists
+    if [ -d "$PROJECT_WT_DIR/$name" ]; then
+        rm -rf "$PROJECT_WT_DIR/$name"
+        echo "✓ Worktree directory deleted"
+        log "rm -rf ok: $PROJECT_WT_DIR/$name"
+    else
+        log "No managed dir: $PROJECT_WT_DIR/$name (may use different path)"
+    fi
+
+    echo "Done."
+    log "delete_worktree done (rc=$rc)"
+    sleep 2
+    return $rc
+}
 
 # Use fzf to select or type a new name
 # Use Tab as delimiter and show only the first field
 FZF_OUT=$(mktemp)
+DEL_FILE=$(mktemp /tmp/wt-del-XXXX)
 echo "$worktrees" | fzf \
     --print-query \
     --delimiter '\t' \
     --with-nth 1 \
-    --header "Project: $PROJECT_ID | Enter: Switch | Type Name + Enter: Create" \
-    --prompt "Worktree: " > "$FZF_OUT"
+    --header "Project: $PROJECT_ID | Enter: Switch | Ctrl-G: Delete | Type Name + Enter: Create" \
+    --prompt "Worktree: " \
+    --bind "ctrl-g:execute(echo {1} > $DEL_FILE)+abort" > "$FZF_OUT"
 
 # Read result and remove temp file
 query=$(sed -n '1p' "$FZF_OUT")
 selection=$(sed -n '2p' "$FZF_OUT")
 rm "$FZF_OUT"
 
+log "post-fzf: query='$query' selection='$selection' DEL_FILE=$(cat "$DEL_FILE" 2>/dev/null)"
+
+# Handle delete from fzf keybinding — must come before the empty check
+# because execute+abort produces empty query+selection
+if [ -s "$DEL_FILE" ]; then
+    name_to_delete=$(cat "$DEL_FILE" | tr -d '[:space:]')
+    rm -f "$DEL_FILE"
+    log "delete requested: name='$name_to_delete'"
+    [ -z "$name_to_delete" ] && exit 0
+    while IFS=$'\t' read -r n p b; do
+        if [ "$n" = "$name_to_delete" ]; then
+            delete_worktree "$n" "$p" "$b"
+            rc=$?
+            log "delete_worktree exit: $rc"
+            echo "Log: $LOG_FILE"
+            sleep 2
+            exit $rc
+        fi
+    done <<< "$worktrees"
+    echo "Error: Worktree '$name_to_delete' not found" | tee -a "$LOG_FILE"
+    sleep 2
+    exit 1
+fi
+rm -f "$DEL_FILE"
+
+# Early exit if nothing selected
 if [ -z "$query" ] && [ -z "$selection" ]; then
     exit 0
 fi
