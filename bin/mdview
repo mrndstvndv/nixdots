@@ -1866,7 +1866,57 @@ function renderMermaidScript() {
   return `<script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
   const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  mermaid.initialize({ startOnLoad: true, theme: isDarkMode ? "dark" : "default" });
+  mermaid.initialize({ startOnLoad: false, theme: isDarkMode ? "dark" : "default" });
+
+  function mdviewEscapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function mdviewCreateMermaidErrorBlock(block, text, err) {
+    var container = document.createElement("div");
+    container.className = "mermaid-error";
+    container.style.cssText = "color:var(--accent-rust,#b86b52);font-family:var(--mono);font-size:0.85rem;padding:0.75rem;border:1px solid var(--accent-rust,#b86b52);background:rgba(184,107,82,0.06);text-align:left;";
+
+    var heading = document.createElement("strong");
+    heading.textContent = "Mermaid parse error";
+    container.appendChild(heading);
+
+    var message = document.createElement("pre");
+    message.style.cssText = "margin:0.5rem 0 0;white-space:pre-wrap;word-break:break-word;font-size:0.8rem;";
+    message.textContent = err && err.message ? err.message : String(err || "Unknown error");
+    container.appendChild(message);
+
+    var details = document.createElement("details");
+    details.style.cssText = "margin-top:0.5rem;";
+    var summary = document.createElement("summary");
+    summary.style.cssText = "cursor:pointer;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;";
+    summary.textContent = "Diagram source";
+    details.appendChild(summary);
+
+    var source = document.createElement("pre");
+    source.style.cssText = "margin:0.5rem 0 0;white-space:pre-wrap;word-break:break-word;font-size:0.8rem;";
+    source.textContent = text;
+    details.appendChild(source);
+
+    block.textContent = "";
+    block.appendChild(container);
+  }
+
+  (async function () {
+    var blocks = document.querySelectorAll(".mermaid");
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i];
+      var text = (block.textContent || "").trim();
+      if (!text) continue;
+      try {
+        await mermaid.run({ nodes: [block] });
+      } catch (err) {
+        mdviewCreateMermaidErrorBlock(block, text, err);
+      }
+    }
+  })();
 </script>`;
 }
 
@@ -1884,7 +1934,7 @@ function renderAutoPrintScript() {
 
     while (Date.now() < deadline) {
       const mermaidBlocks = Array.from(document.querySelectorAll(".mermaid"));
-      const mermaidReady = mermaidBlocks.length === 0 || mermaidBlocks.every((block) => block.querySelector("svg"));
+      const mermaidReady = mermaidBlocks.length === 0 || mermaidBlocks.every((block) => block.querySelector("svg") || block.querySelector(".mermaid-error"));
       if (!mermaidReady) {
         await mdviewSleep(120);
         continue;
