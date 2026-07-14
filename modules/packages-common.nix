@@ -1,4 +1,4 @@
-{ config, pkgs, codex, ... }:
+{ config, pkgs, ... }:
 {
   imports = [ ./bun.nix ];
 
@@ -24,10 +24,6 @@
     pkgs.cargo
 
     pkgs.ripgrep
-
-    # OpenAI Codex CLI from external flake input
-    # Use the flake's package matching our system
-    codex.packages.${pkgs.system}.codex
   ];
 
   programs.direnv = {

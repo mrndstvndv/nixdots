@@ -22,11 +22,6 @@
       flake = false;
     };
 
-    # Codex CLI flake from GitHub
-    codex = {
-      url = "github:sadjow/codex-cli-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     piAgent = {
       url = "github:mrndstvndv/pi-coding-agent-flake";
@@ -35,7 +30,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, piAgent ? null }:
    let
       supportedStandaloneHomeSystems = [
         "aarch64-linux"
@@ -72,7 +67,7 @@
       mkStandaloneHomeConfiguration = system:
         home-manager.lib.homeManagerConfiguration {
           pkgs = nixpkgs.legacyPackages.${system};
-          extraSpecialArgs = { inherit codex piAgent; };
+          extraSpecialArgs = { inherit piAgent; };
           modules = [
             ./alpine/home.nix
             {
@@ -129,7 +124,7 @@
            shell = pkgs.fish;
          };
          home-manager.useGlobalPkgs = true;
-         home-manager.extraSpecialArgs = { inherit (inputs) codex; inherit piAgent; };
+         home-manager.extraSpecialArgs = { inherit piAgent; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [

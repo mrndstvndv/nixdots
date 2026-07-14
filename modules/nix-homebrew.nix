@@ -56,7 +56,6 @@
       "obs"
       "brave-browser@nightly"
       "steam"
-      "localsend"
       "github-copilot-app"
       "visual-studio-code@insiders"
       "android-studio"
