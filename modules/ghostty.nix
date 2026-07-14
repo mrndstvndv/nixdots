@@ -6,7 +6,7 @@
     enableFishIntegration = true;
 
     settings = {
-      command = "${pkgs.fish}/bin/fish -c '${pkgs.tmux}/bin/tmux new -As0 ${pkgs.fish}/bin/fish'";
+      command = "/opt/homebrew/bin/herdr";
       background-opacity = "0.9";
       background-blur = true;
       # theme = "Gruvbox Dark Hard";
