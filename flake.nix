@@ -21,12 +21,6 @@
       url = "github:narugit/homebrew-tap";
       flake = false;
     };
-    nix-on-droid = {
-      url = "github:nix-community/nix-on-droid/release-24.05";
-      inputs.nixpkgs.follows = "nixpkgs";
-      # Reuse our home-manager input inside nix-on-droid
-      inputs.home-manager.follows = "home-manager";
-    };
 
     # Codex CLI flake from GitHub
     codex = {
@@ -41,7 +35,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, nix-on-droid, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, codex, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, piAgent ? null }:
    let
       supportedStandaloneHomeSystems = [
         "aarch64-linux"
@@ -139,7 +133,6 @@
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [
-             ./darwin/common.nix
              ./darwin/home.nix
            ];
          };
@@ -194,17 +187,6 @@
     };
 
 
-    # Nix-on-Droid configuration. Home Manager is wired through
-    # nix-on-droid itself (see nix-on-droid/system.nix).
-    nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
-      pkgs = import nixpkgs { system = "aarch64-linux"; };
-      modules = [
-        # Inject flake inputs into _module.args, so all
-        # nix-on-droid modules (including HM) can see them.
-        { _module.args.piAgent = piAgent; }
-        ./nix-on-droid/system.nix
-      ];
-    };
 
     packages = nixpkgs.lib.genAttrs androidCliSystems mkAndroidCliPackages;
 
