@@ -23,9 +23,11 @@
     pkgs.jdk17_headless
     pkgs.cargo
 
+    pkgs.ripgrep
+
     # OpenAI Codex CLI from external flake input
     # Use the flake's package matching our system
-    (builtins.getAttr pkgs.system codex.packages).codex
+    codex.packages.${pkgs.system}.codex
   ];
 
   programs.direnv = {

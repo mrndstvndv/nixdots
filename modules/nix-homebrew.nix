@@ -67,7 +67,6 @@
       "herdr"
       "smctemp"
       "jadx"
-      "ripgrep"
     ];
   };
 }
