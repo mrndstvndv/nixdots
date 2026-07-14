@@ -59,6 +59,7 @@
       "github-copilot-app"
       "visual-studio-code@insiders"
       "android-studio"
+      "qbittorrent"
     ];
 
     brews = [
