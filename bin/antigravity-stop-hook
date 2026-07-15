@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Read the stdin JSON context payload (if any)
+payload=$(cat)
+
+# Extract information from JSON using jq
+if [ -n "$payload" ] && command -v jq >/dev/null 2>&1; then
+    workspace_path=$(echo "$payload" | jq -r '.workspacePaths[0] // empty')
+    conversation_id=$(echo "$payload" | jq -r '.conversationId // empty')
+else
+    workspace_path=""
+    conversation_id=""
+fi
+
+# Format the message
+title="Agent Done"
+msg="Task completed"
+
+if [ -n "$workspace_path" ]; then
+    workspace_name=$(basename "$workspace_path")
+    msg="Finished task in $workspace_name"
+fi
+
+if [ -n "$conversation_id" ]; then
+    # Show first 8 chars of conversation ID
+    short_id="${conversation_id:0:8}"
+    msg="$msg ($short_id)"
+fi
+
+# Call the osc-notify script.
+script_dir="$(dirname "$0")"
+if [ -x "$script_dir/osc-notify" ]; then
+    "$script_dir/osc-notify" "$title" "$msg" >&2
+else
+    osc-notify "$title" "$msg" >&2
+fi

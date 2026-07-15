@@ -1,6 +1,9 @@
 { config, pkgs, ... }:
 {
-  imports = [ ./bun.nix ];
+  imports = [
+    ./bun.nix
+    ./antigravity.nix
+  ];
 
   custom.bun.enable = true;
 
@@ -24,7 +27,10 @@
     pkgs.cargo
 
     pkgs.ripgrep
+
+    # faster ssh
     pkgs.socat
+    pkgs.mosh
   ];
 
   programs.direnv = {
