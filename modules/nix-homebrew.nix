@@ -20,6 +20,14 @@
     # homebrew-repo directory name for taps not following the
     # homebrew-* naming convention.
     mutableTaps = true;
+
+    # Auto-trust the narugit tap
+    trust = {
+      taps = [
+        "narugit/homebrew-tap"
+        "narugit/tap"
+      ];
+    };
   };
 
   # Homebrew configuration
@@ -52,7 +60,7 @@
       "antigravity"
       "proton-pass"
       "protonvpn"
-      "mpv"
+      "stolendata-mpv"
       "obs"
       "brave-browser@nightly"
       "steam"
