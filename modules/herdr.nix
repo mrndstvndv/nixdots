@@ -15,7 +15,10 @@
     split_vertical = "prefix+%"
     split_horizontal = 'prefix+"'
     detach = ["prefix+q", "prefix+d"]
-    focus_pane_right = ""
+    focus_pane_left = "prefix+left"
+    focus_pane_down = "prefix+down"
+    focus_pane_up = "prefix+up"
+    focus_pane_right = "prefix+right"
 
     [[keys.command]]
     key = "prefix+l"
