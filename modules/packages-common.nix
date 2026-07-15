@@ -24,6 +24,7 @@
     pkgs.cargo
 
     pkgs.ripgrep
+    pkgs.socat
   ];
 
   programs.direnv = {
