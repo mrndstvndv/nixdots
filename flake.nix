@@ -174,6 +174,7 @@
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
+        ./modules/mount-realme.nix
         neru.darwinModules.default
         { nixpkgs.overlays = [ neru.overlays.default androidCliOverlay ]; }
         { services.neru.enable = true; services.neru.configFile = ./modules/neru-config.toml; }
