@@ -10,8 +10,8 @@
     [keys]
     settings = ""
     workspace_picker = "prefix+s"
-    previous_workspace = "prefix+("
-    next_workspace = "prefix+)"
+    previous_workspace = "ctrl+J"
+    next_workspace = "ctrl+K"
     split_vertical = "prefix+%"
     split_horizontal = 'prefix+"'
     detach = ["prefix+q", "prefix+d"]
@@ -24,6 +24,12 @@
     key = "prefix+l"
     type = "pane"
     command = "lazygit"
+
+    [[keys.command]]
+    key = "prefix+t"
+    type = "pane"
+    command = "wt exit"
+    description = "git worktree manager"
 
     [ui.toast]
     delivery = "terminal"

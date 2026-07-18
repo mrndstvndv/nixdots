@@ -62,12 +62,13 @@
       "protonvpn"
       "stolendata-mpv"
       "obs"
-      "brave-browser@nightly"
       "steam"
       "github-copilot-app"
+      "codex"
       "visual-studio-code@insiders"
       "android-studio"
       "qbittorrent"
+      "helium-browser"
     ];
 
     brews = [

@@ -6,7 +6,6 @@
     enableFishIntegration = true;
 
     settings = {
-      command = "/opt/homebrew/bin/herdr";
       background-opacity = "0.9";
       background-blur = true;
       # theme = "Gruvbox Dark Hard";
