@@ -1,4 +1,4 @@
-{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, ... }:
+{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, ... }:
 {
   nix-homebrew = {
     enable = true;
@@ -14,6 +14,7 @@
       "homebrew/homebrew-core" = homebrew-core;
       "homebrew/homebrew-cask" = homebrew-cask;
       "narugit/homebrew-tap" = homebrew-smctemp;
+      "egoist/homebrew-tap" = homebrew-egoist;
     };
 
     # Enable mutable taps so brew can create the correct
@@ -21,11 +22,13 @@
     # homebrew-* naming convention.
     mutableTaps = true;
 
-    # Auto-trust the narugit tap
+    # Auto-trust third-party taps
     trust = {
       taps = [
         "narugit/homebrew-tap"
         "narugit/tap"
+        "egoist/homebrew-tap"
+        "egoist/tap"
       ];
     };
   };
@@ -64,11 +67,15 @@
       "obs"
       "steam"
       "github-copilot-app"
-      "codex"
       "visual-studio-code@insiders"
       "android-studio"
       "qbittorrent"
       "helium-browser"
+      "fluidvoice"
+      "telegram"
+      "egoist/tap/kero"
+      "t3-code@nightly"
+      "codex"
     ];
 
     brews = [

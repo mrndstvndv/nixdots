@@ -21,6 +21,10 @@
       url = "github:narugit/homebrew-tap";
       flake = false;
     };
+    homebrew-egoist = {
+      url = "github:egoist/homebrew-tap";
+      flake = false;
+    };
 
 
     piAgent = {
@@ -30,7 +34,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, piAgent ? null }:
    let
       supportedStandaloneHomeSystems = [
         "aarch64-linux"
@@ -170,7 +174,7 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#proputer
     darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit home-manager; inherit (inputs) homebrew-nix homebrew-core homebrew-cask homebrew-smctemp codex; };
+      specialArgs = { inherit home-manager; inherit (inputs) homebrew-nix homebrew-core homebrew-cask homebrew-smctemp homebrew-egoist codex; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
