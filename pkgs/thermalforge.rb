@@ -12,10 +12,17 @@
 # 3. post_install copies the .app to /Applications, which Homebrew's
 #    sandbox blocks (Errno::EPERM). The copy is now best-effort with a
 #    manual fallback message. (upstream issue #4)
+# 4. v0.1.0 has no Smart profile at all (added to main after the tag),
+#    so we build from a pinned main commit (f6eb5d23) instead.
+# 5. The CLI's `watch` validates profiles against FanProfile.builtIn,
+#    which excludes `smart`. The inreplace below adds it so
+#    `thermalforge watch --profile smart` works from the CLI.
 class Thermalforge < Formula
   desc "Fan control for Apple Silicon MacBooks"
   homepage "https://github.com/ProducerGuy/ThermalForge"
-  url "https://github.com/ProducerGuy/ThermalForge.git", tag: "v0.1.0"
+  url "https://github.com/ProducerGuy/ThermalForge.git", revision: "f6eb5d23b68c984a1f58e002f36124a6c081c7a0"
+  version "0.1.0"
+  revision 1
   license "MIT"
 
   # Prebuilt app icon from the main branch (v0.1.0 tag has none).
@@ -27,6 +34,13 @@ class Thermalforge < Formula
   depends_on macos: :sonoma
 
   def install
+    # Expose the Smart profile to the CLI's `watch` command (upstream
+    # excludes it from builtIn; the logic itself is in the shared core
+    # and the watch loop already dispatches on profile.id == "smart").
+    inreplace "Sources/ThermalForgeCore/Profile.swift",
+      "public static let builtIn: [FanProfile] = [silent, balanced, performance, max]",
+      "public static let builtIn: [FanProfile] = [silent, balanced, performance, max, smart]"
+
     # Build both CLI and menu bar app
     system "swift", "build", "-c", "release", "--disable-sandbox"
 
