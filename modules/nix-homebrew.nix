@@ -1,4 +1,15 @@
 { config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, ... }:
+let
+  # Upstream thermalforge formula is broken in three ways: requires full
+  # Xcode.app (CLT's swift suffices), v0.1.0 tag is missing the icon files,
+  # and post_install can't write /Applications from the brew sandbox.
+  # See pkgs/thermalforge.rb for the fixes.
+  thermalforge-tap = pkgs.runCommandLocal "homebrew-tap-thermalforge" { } ''
+    cp -r ${homebrew-thermalforge} $out
+    chmod -R u+w $out
+    cp ${../pkgs/thermalforge.rb} $out/Formula/thermalforge.rb
+  '';
+in
 {
   nix-homebrew = {
     enable = true;
@@ -15,7 +26,7 @@
       "homebrew/homebrew-cask" = homebrew-cask;
       "narugit/homebrew-tap" = homebrew-smctemp;
       "egoist/homebrew-tap" = homebrew-egoist;
-      "ProducerGuy/homebrew-tap" = homebrew-thermalforge;
+      "ProducerGuy/homebrew-tap" = thermalforge-tap;
     };
 
     # Enable mutable taps so brew can create the correct
