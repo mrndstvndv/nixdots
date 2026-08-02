@@ -98,4 +98,18 @@ in
       "ProducerGuy/tap/thermalforge"
     ];
   };
+
+  # Run the Smart profile headless at boot (no login needed). The socket
+  # daemon only executes commands and its watchdog never touches fans unless
+  # the menu bar app connects, so this doesn't conflict.
+  launchd.daemons."com.thermalforge.smart" = {
+    command = "/usr/local/bin/thermalforge watch --profile smart";
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      ProcessType = "Background";
+      StandardOutPath = "/var/log/thermalforge-smart.log";
+      StandardErrorPath = "/var/log/thermalforge-smart.log";
+    };
+  };
 }
