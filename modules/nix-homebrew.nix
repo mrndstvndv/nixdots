@@ -1,4 +1,4 @@
-{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, ... }:
+{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, ... }:
 {
   nix-homebrew = {
     enable = true;
@@ -15,6 +15,7 @@
       "homebrew/homebrew-cask" = homebrew-cask;
       "narugit/homebrew-tap" = homebrew-smctemp;
       "egoist/homebrew-tap" = homebrew-egoist;
+      "ProducerGuy/homebrew-tap" = homebrew-thermalforge;
     };
 
     # Enable mutable taps so brew can create the correct
@@ -29,6 +30,8 @@
         "narugit/tap"
         "egoist/homebrew-tap"
         "egoist/tap"
+        "ProducerGuy/homebrew-tap"
+        "ProducerGuy/tap"
       ];
     };
   };
@@ -74,8 +77,6 @@
       "fluidvoice"
       "telegram"
       "egoist/tap/kero"
-      "t3-code@nightly"
-      "codex"
     ];
 
     brews = [
@@ -83,6 +84,7 @@
       "herdr"
       "smctemp"
       "jadx"
+      "ProducerGuy/tap/thermalforge"
     ];
   };
 }

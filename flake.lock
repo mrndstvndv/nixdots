@@ -101,6 +101,22 @@
         "type": "github"
       }
     },
+    "homebrew-thermalforge": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775693100,
+        "narHash": "sha256-CJZPUPCz0nerEu2PAmcHrC1+ATO+NoaniFTS9WBJtSg=",
+        "owner": "ProducerGuy",
+        "repo": "homebrew-tap",
+        "rev": "052263cb3f0c7f38d15fa17a0d904468ffe605ea",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ProducerGuy",
+        "repo": "homebrew-tap",
+        "type": "github"
+      }
+    },
     "neru": {
       "inputs": {
         "nixpkgs": "nixpkgs"
@@ -197,11 +213,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1785243360,
-        "narHash": "sha256-ErDa9VxL4xIgAtylqfQX8byInms/dGis/2csJZiyCG4=",
+        "lastModified": 1785567949,
+        "narHash": "sha256-7hImLBd9OJK563odim77YPbK9pQ212p3xUjGq3Z9CeY=",
         "owner": "mrndstvndv",
         "repo": "pi-coding-agent-flake",
-        "rev": "da1a0ba163cc3856946056b624cd46f4f53989d7",
+        "rev": "0cc76a239afb8c1622e825fa10fe51f3e57b68d0",
         "type": "github"
       },
       "original": {
@@ -217,6 +233,7 @@
         "homebrew-core": "homebrew-core",
         "homebrew-egoist": "homebrew-egoist",
         "homebrew-smctemp": "homebrew-smctemp",
+        "homebrew-thermalforge": "homebrew-thermalforge",
         "neru": "neru",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
