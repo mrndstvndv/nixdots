@@ -95,6 +95,7 @@ in
       "herdr"
       "smctemp"
       "jadx"
+      "apktool"
       "ProducerGuy/tap/thermalforge"
     ];
   };
