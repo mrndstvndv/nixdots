@@ -3,7 +3,7 @@ let
   sources = {
     aarch64-darwin = {
       url = "https://dl.google.com/android/cli/latest/darwin_arm64/android";
-      hash = "sha256-KIwoqDAj+ywjhdyfftRJfT7305ERITvNtMswqT0CQ/w=";
+      hash = "sha256-D6ND/alDO3x05OuR06GM7GBHeinAFaAY3RiSIqPQ0CA=";
     };
 
     x86_64-linux = {
@@ -17,7 +17,7 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "android-cli";
-  version = "unstable-2026-04-19";
+  version = "unstable-2026-08-03";
 
   src = fetchurl source;
   dontUnpack = true;
