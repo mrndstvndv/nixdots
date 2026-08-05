@@ -29,10 +29,8 @@ in
       "ProducerGuy/homebrew-tap" = thermalforge-tap;
     };
 
-    # Enable mutable taps so brew can create the correct
-    # homebrew-repo directory name for taps not following the
-    # homebrew-* naming convention.
-    mutableTaps = true;
+    # Taps are pinned and managed declaratively by this flake.
+    mutableTaps = false;
 
     # Auto-trust third-party taps
     trust = {
@@ -88,6 +86,7 @@ in
       "fluidvoice"
       "telegram"
       "egoist/tap/kero"
+      "hermes-desktop"
     ];
 
     brews = [

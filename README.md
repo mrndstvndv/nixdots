@@ -10,6 +10,20 @@ Personal Nix configurations for macOS (nix-darwin), Android (nix-on-droid), and 
 | `default` | Android (nix-on-droid) | `nix-on-droid switch --flake .` |
 | `alpine` | Alpine chroot (Termux) | `nix run ~/.config/nixdots#alpine` |
 
+## macOS Bootstrap
+
+The first macOS activation can use the remote bootstrap command:
+
+```bash
+sudo -H nix run nix-darwin/master#darwin-rebuild -- switch --flake .#proputer
+```
+
+After that, use the installed `darwin-rebuild` instead of `nix run`:
+
+```bash
+sudo darwin-rebuild switch --flake .#proputer
+```
+
 ## Alpine Chroot (Termux)
 
 Run the auto-detected switch app:

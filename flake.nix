@@ -3,6 +3,8 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    neru.url = "github:y3owk1n/neru";
+    neru.inputs.nixpkgs.follows = "nixpkgs";
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager";
@@ -38,7 +40,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, piAgent ? null }:
    let
       supportedStandaloneHomeSystems = [
         "aarch64-linux"
@@ -169,6 +171,9 @@
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
+
+      # Required for launchd user agents (like neru)
+      system.primaryUser = "steven";
     };
   in
   {
@@ -182,6 +187,9 @@
         ./modules/mount-realme.nix
         ./modules/herdr-daemon.nix
         { nixpkgs.overlays = [ androidCliOverlay ]; }
+        neru.darwinModules.default
+        { nixpkgs.overlays = [ neru.overlays.default ]; }
+        { services.neru.enable = true; }
         configuration 
       ];
     };

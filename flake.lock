@@ -117,6 +117,26 @@
         "type": "github"
       }
     },
+    "neru": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785902048,
+        "narHash": "sha256-AjveEhxXoNs94hqSGC07p7wBCMPYUFxq1F2YxXpaizc=",
+        "owner": "y3owk1n",
+        "repo": "neru",
+        "rev": "3129f3a27004222b096e233acaf17ddc79ce8fb9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "y3owk1n",
+        "repo": "neru",
+        "type": "github"
+      }
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -200,6 +220,7 @@
         "homebrew-egoist": "homebrew-egoist",
         "homebrew-smctemp": "homebrew-smctemp",
         "homebrew-thermalforge": "homebrew-thermalforge",
+        "neru": "neru",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
         "nixpkgs": "nixpkgs",
