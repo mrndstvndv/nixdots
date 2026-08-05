@@ -14,9 +14,9 @@
 # `herdr session attach`, NOT `herdr server`, from the client side.
 {
   launchd.daemons.herdr = {
-    script = ''
-      exec /opt/homebrew/bin/herdr server
-    '';
+    # Use a direct command: launchd's Nix-generated script wrapper is blocked
+    # by macOS when this daemon runs as a non-root user.
+    command = "/opt/homebrew/bin/herdr server";
     serviceConfig = {
       Label = "org.nixos.herdr";
       UserName = "steven";
@@ -27,8 +27,9 @@
         HOME = "/Users/steven";
         PATH = "/Users/steven/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
       };
-      StandardOutPath = "/var/log/herdr.log";
-      StandardErrorPath = "/var/log/herdr.err.log";
+      # launchd opens these after dropping to UserName; /var/log is root-only.
+      StandardOutPath = "/Users/steven/.config/herdr/launchd.out.log";
+      StandardErrorPath = "/Users/steven/.config/herdr/launchd.err.log";
     };
   };
 }
