@@ -144,7 +144,10 @@
 
          # List packages installed in system profile. To search by name, run:
          # $ nix-env -qaP | grep wget
-         environment.systemPackages = [];
+         # Keep nix-darwin's activation checker rooted. Determinate Nixd's
+         # automatic GC otherwise removes this build-time dependency after
+         # each switch, forcing ShellCheck to be downloaded again.
+         environment.systemPackages = [ pkgs.shellcheck ];
           environment.systemPath = [
             "/nix/var/nix/profiles/default/bin"
             "/opt/homebrew/bin"

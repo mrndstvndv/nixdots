@@ -9,7 +9,6 @@
       ../modules/tmux.nix
       ../modules/packages-common.nix
       ../modules/packages-gui.nix
-      ./aerospace.nix
     ];
 
   home.packages = [

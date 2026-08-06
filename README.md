@@ -18,10 +18,10 @@ The first macOS activation can use the remote bootstrap command:
 sudo -H nix run nix-darwin/master#darwin-rebuild -- switch --flake .#proputer
 ```
 
-After that, use the installed `darwin-rebuild` instead of `nix run`:
+After that, use the installed `darwin-rebuild` instead of `nix run`. Use its absolute path because sudo's PATH does not include Nix:
 
 ```bash
-sudo darwin-rebuild switch --flake .#proputer
+sudo /nix/var/nix/profiles/system/sw/bin/darwin-rebuild switch --flake .#proputer
 ```
 
 ## Alpine Chroot (Termux)
