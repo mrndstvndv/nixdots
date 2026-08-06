@@ -87,6 +87,7 @@ in
       "telegram"
       "egoist/tap/kero"
       "hermes-desktop"
+      "codex"
     ];
 
     brews = [
