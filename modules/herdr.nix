@@ -6,6 +6,7 @@
     [ui]
     prompt_new_tab_name = false
     show_agent_labels_on_pane_borders = false
+    sidebar_collapsed_mode = "hidden"
 
     [keys]
     settings = ""
