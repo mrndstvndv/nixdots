@@ -22,7 +22,7 @@ class Thermalforge < Formula
   homepage "https://github.com/ProducerGuy/ThermalForge"
   url "https://github.com/ProducerGuy/ThermalForge.git", revision: "f6eb5d23b68c984a1f58e002f36124a6c081c7a0"
   version "0.1.0"
-  revision 1
+  revision 2
   license "MIT"
 
   # Prebuilt app icon from the main branch (v0.1.0 tag has none).
@@ -40,6 +40,16 @@ class Thermalforge < Formula
     inreplace "Sources/ThermalForgeCore/Profile.swift",
       "public static let builtIn: [FanProfile] = [silent, balanced, performance, max]",
       "public static let builtIn: [FanProfile] = [silent, balanced, performance, max, smart]"
+
+    # Disable persistent runtime logging. Fan control does not depend on log files;
+    # the explicit `thermalforge log` command remains available for opt-in data capture.
+    inreplace "Sources/ThermalForgeCore/Logger.swift" do |s|
+      patched = s.gsub!(
+        /    private func write\(_ category: String, _ message: String\) \{.*?\n    \}/m,
+        "    private func write(_ category: String, _ message: String) {}\n"
+      )
+      raise "TFLogger.write patch did not match" unless patched
+    end
 
     # Build both CLI and menu bar app
     system "swift", "build", "-c", "release", "--disable-sandbox"
