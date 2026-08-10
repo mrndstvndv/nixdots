@@ -1,4 +1,4 @@
-{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, ... }:
+{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, homebrew-nikitabobko, ... }:
 let
   # Upstream thermalforge formula is broken in three ways: requires full
   # Xcode.app (CLT's swift suffices), v0.1.0 tag is missing the icon files,
@@ -27,6 +27,7 @@ in
       "narugit/homebrew-tap" = homebrew-smctemp;
       "egoist/homebrew-tap" = homebrew-egoist;
       "ProducerGuy/homebrew-tap" = thermalforge-tap;
+      "nikitabobko/homebrew-tap" = homebrew-nikitabobko;
     };
 
     # Taps are pinned and managed declaratively by this flake.
@@ -41,6 +42,8 @@ in
         "egoist/tap"
         "ProducerGuy/homebrew-tap"
         "ProducerGuy/tap"
+        "nikitabobko/homebrew-tap"
+        "nikitabobko/tap"
       ];
     };
   };
@@ -85,9 +88,9 @@ in
       "helium-browser"
       "fluidvoice"
       "telegram"
-      "egoist/tap/kero"
       "hermes-desktop"
       "codex"
+      "nikitabobko/tap/aerospace"
     ];
 
     brews = [
@@ -100,17 +103,48 @@ in
     ];
   };
 
-  # Run the Smart profile headless at boot (no login needed). The socket
-  # daemon only executes commands and its watchdog never touches fans unless
-  # the menu bar app connects, so this doesn't conflict.
-  launchd.daemons."com.thermalforge.smart" = {
-    command = "/usr/local/bin/thermalforge watch --profile smart";
+  # Wait for the SMC to answer before starting either process. At boot the
+  # hardware can lag launchd; retrying here prevents a one-shot failed start.
+  launchd.daemons."com.thermalforge.daemon" = {
     serviceConfig = {
+      Label = "com.thermalforge.daemon";
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        ''
+          until /usr/local/bin/thermalforge status >/dev/null 2>&1; do
+            /bin/sleep 2
+          done
+          exec /usr/local/bin/thermalforge daemon
+        ''
+      ];
       RunAtLoad = true;
       KeepAlive = true;
       ProcessType = "Background";
-      StandardOutPath = "/var/log/thermalforge-smart.log";
-      StandardErrorPath = "/var/log/thermalforge-smart.log";
+      ThrottleInterval = 5;
+      StandardOutPath = "/dev/null";
+      StandardErrorPath = "/dev/null";
+    };
+  };
+
+  launchd.daemons."com.thermalforge.smart" = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        ''
+          until /usr/local/bin/thermalforge status >/dev/null 2>&1; do
+            /bin/sleep 2
+          done
+          exec /usr/local/bin/thermalforge watch --profile smart
+        ''
+      ];
+      RunAtLoad = true;
+      KeepAlive = true;
+      ProcessType = "Background";
+      ThrottleInterval = 5;
+      StandardOutPath = "/dev/null";
+      StandardErrorPath = "/dev/null";
     };
   };
 }

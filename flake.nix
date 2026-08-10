@@ -31,6 +31,10 @@
       url = "github:ProducerGuy/homebrew-tap";
       flake = false;
     };
+    homebrew-nikitabobko = {
+      url = "github:nikitabobko/homebrew-tap";
+      flake = false;
+    };
 
 
     piAgent = {
@@ -40,7 +44,7 @@
 
   };
 
-   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, piAgent ? null }:
+   outputs = inputs@{ self, nix-darwin, nixpkgs, neru, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, homebrew-nikitabobko, piAgent ? null }:
    let
       supportedStandaloneHomeSystems = [
         "aarch64-linux"
@@ -54,6 +58,18 @@
 
       androidCliOverlay = final: prev: {
         android-cli = final.callPackage ./pkgs/android-cli.nix { };
+      };
+
+      bunVersion = "1.3.14";
+      bunOverlay = final: prev: {
+        # nixpkgs is still on 1.3.13.
+        bun = prev.bun.overrideAttrs (_: {
+          version = bunVersion;
+          src = final.fetchurl {
+            url = "https://github.com/oven-sh/bun/releases/download/bun-v${bunVersion}/bun-darwin-aarch64.zip";
+            hash = "sha256-2LliIYKK1vl6x6wKt+lYcjQa92MAHogD6CZ2UsJlJiA=";
+          };
+        });
       };
 
       currentStandaloneHomeSystem =
@@ -183,13 +199,13 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#proputer
     darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit home-manager; inherit (inputs) homebrew-core homebrew-cask homebrew-smctemp homebrew-egoist homebrew-thermalforge; };
+      specialArgs = { inherit home-manager; inherit (inputs) homebrew-core homebrew-cask homebrew-smctemp homebrew-egoist homebrew-thermalforge homebrew-nikitabobko; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
         ./modules/mount-realme.nix
         ./modules/herdr-daemon.nix
-        { nixpkgs.overlays = [ androidCliOverlay ]; }
+        { nixpkgs.overlays = [ androidCliOverlay bunOverlay ]; }
         neru.darwinModules.default
         { nixpkgs.overlays = [ neru.overlays.default ]; }
         { services.neru.enable = true; }
