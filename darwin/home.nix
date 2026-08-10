@@ -9,6 +9,7 @@
       ../modules/tmux.nix
       ../modules/packages-common.nix
       ../modules/packages-gui.nix
+      ../modules/rio.nix
       ./aerospace.nix
     ];
 

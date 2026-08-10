@@ -98,6 +98,7 @@ in
       "hermes-desktop"
       "codex"
       "nikitabobko/tap/aerospace"
+      "rio"
     ];
 
     brews = [
