@@ -199,7 +199,7 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#proputer
     darwinConfigurations."proputer" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit home-manager; inherit (inputs) homebrew-core homebrew-cask homebrew-smctemp homebrew-egoist homebrew-thermalforge homebrew-nikitabobko; };
+      specialArgs = { inherit home-manager homebrew-core homebrew-cask homebrew-smctemp homebrew-egoist homebrew-thermalforge homebrew-nikitabobko; };
       modules = [ 
         inputs.nix-homebrew.darwinModules.nix-homebrew
         ./modules/nix-homebrew.nix
