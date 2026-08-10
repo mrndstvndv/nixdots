@@ -59,9 +59,16 @@ in
     # Sync taps with nix-homebrew.taps, but use clone_target for
     # taps whose GitHub repo doesn't follow the homebrew- naming
     # convention (nix-homebrew creates wrong directory names for those).
-    taps = (builtins.map (name: { inherit name; }) (
-      builtins.attrNames config.nix-homebrew.taps
-    ));
+    taps = let
+      official = [ "homebrew/homebrew-core" "homebrew/homebrew-cask" ];
+    in
+      builtins.map (name: {
+        inherit name;
+        # Without this, brew bundle's cleanup does `Trust.replace!` on every
+        # switch, which wipes tap trust entries added by nix-homebrew's
+        # `trust.taps` and breaks `brew cleanup` for third-party taps.
+        trusted = !builtins.elem name official;
+      }) (builtins.attrNames config.nix-homebrew.taps);
 
     # Lifecycle automation
     onActivation = {
