@@ -1,10 +1,13 @@
-{ ... }:
+{ isSshSession ? false, ... }:
+let
+  launchdEnabled = !isSshSession;
+in
 {
   programs.aerospace = {
     enable = true;
-    launchd.enable = true;
+    launchd.enable = launchdEnabled;
     settings = {
-      start-at-login = true;
+      start-at-login = launchdEnabled;
 
       # Ghostty workaround: prevent tabs from being tiled as separate windows
       # https://ghostty.org/docs/help/macos-tiling-wms

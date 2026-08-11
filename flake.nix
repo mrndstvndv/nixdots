@@ -51,6 +51,11 @@
         "x86_64-linux"
       ];
 
+      # Environment detection requires `darwin-rebuild --impure`.
+      isSshSession =
+        builtins.getEnv "SSH_CONNECTION" != ""
+        || builtins.getEnv "SSH_TTY" != "";
+
       androidCliSystems = [
         "aarch64-darwin"
         "x86_64-linux"
@@ -150,7 +155,7 @@
            shell = pkgs.fish;
          };
          home-manager.useGlobalPkgs = true;
-         home-manager.extraSpecialArgs = { inherit piAgent; };
+         home-manager.extraSpecialArgs = { inherit piAgent isSshSession; };
          home-manager.backupFileExtension = "backup";
          home-manager.users.steven = {
            imports = [
