@@ -25,6 +25,8 @@
     pkgs.neovim
     pkgs.jdk17_headless
     pkgs.cargo
+    pkgs.rustc
+    pkgs.rustPlatform.rustLibSrc
 
     pkgs.ripgrep
 
@@ -44,4 +46,7 @@
     "${config.home.homeDirectory}/.local/bin"
     "${config.home.homeDirectory}/.config/nixdots/bin"
   ];
+
+  # rust-analyzer needs std sources to expand macros
+  home.sessionVariables.RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}/lib/rustlib/src/rust/library";
 }
