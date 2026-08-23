@@ -18,6 +18,7 @@ let
 in
 {
   home.file = {
+    ".gemini/antigravity-cli/settings.json".force = true;
     ".gemini/antigravity-cli/settings.json".text = builtins.toJSON {
       allowNonWorkspaceAccess = true;
       editor = "nvim";
