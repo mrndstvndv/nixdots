@@ -1,4 +1,4 @@
-{ config, pkgs, homebrew-core, homebrew-cask, homebrew-smctemp, homebrew-egoist, homebrew-thermalforge, homebrew-nikitabobko, ... }:
+{ lib, pkgs, homebrew-thermalforge, ... }:
 let
   # Upstream thermalforge formula is broken in three ways: requires full
   # Xcode.app (CLT's swift suffices), v0.1.0 tag is missing the icon files,
@@ -20,18 +20,14 @@ in
     # User owning the Homebrew prefix
     user = "steven";
 
-    # Declarative tap management
+    # Keep only the patched tap in Nix. Homebrew owns the other clones so
+    # `brew update` can advance their metadata without changing the flake.
     taps = {
-      "homebrew/homebrew-core" = homebrew-core;
-      "homebrew/homebrew-cask" = homebrew-cask;
-      "narugit/homebrew-tap" = homebrew-smctemp;
-      "egoist/homebrew-tap" = homebrew-egoist;
       "ProducerGuy/homebrew-tap" = thermalforge-tap;
-      "nikitabobko/homebrew-tap" = homebrew-nikitabobko;
     };
 
-    # Taps are pinned and managed declaratively by this flake.
-    mutableTaps = false;
+    # Allow Homebrew to update its mutable tap clones.
+    mutableTaps = true;
 
     # Auto-trust third-party taps
     trust = {
@@ -48,6 +44,18 @@ in
     };
   };
 
+  # The old immutable setup leaves this path as a Nix-store symlink. Remove
+  # only that link before nix-homebrew creates mutable tap directories.
+  system.activationScripts.setup-homebrew.text = lib.mkBefore ''
+    taps=/opt/homebrew/Library/Taps
+    if [[ -L "$taps" && "$(/usr/bin/readlink "$taps")" == /nix/store/* ]]; then
+      rm "$taps"
+      mkdir -p "$taps"
+      chown steven:admin "$taps"
+      chmod ug+rwx "$taps"
+    fi
+  '';
+
   # Homebrew configuration
   homebrew = {
     # Enable the homebrew module
@@ -56,24 +64,29 @@ in
     # User owning the Homebrew installation
     user = "steven";
 
-    # Sync taps with nix-homebrew.taps, but use clone_target for
-    # taps whose GitHub repo doesn't follow the homebrew- naming
-    # convention (nix-homebrew creates wrong directory names for those).
-    taps = let
-      official = [ "homebrew/homebrew-core" "homebrew/homebrew-cask" ];
-    in
-      builtins.map (name: {
-        inherit name;
-        # Without this, brew bundle's cleanup does `Trust.replace!` on every
-        # switch, which wipes tap trust entries added by nix-homebrew's
-        # `trust.taps` and breaks `brew cleanup` for third-party taps.
-        trusted = !builtins.elem name official;
-      }) (builtins.attrNames config.nix-homebrew.taps);
+    # Refresh package metadata before manually invoked Homebrew commands.
+    global.autoUpdate = true;
+
+    # Keep third-party tap membership declarative while leaving repository
+    # contents to Homebrew, except for the locally patched ThermalForge tap
+    # above. Core and cask metadata come from Homebrew's API.
+    taps = builtins.map (name: {
+      inherit name;
+      # Without this, brew bundle's cleanup does `Trust.replace!` on every
+      # switch, which wipes tap trust entries added by nix-homebrew's
+      # `trust.taps` and breaks `brew cleanup` for third-party taps.
+      trusted = true;
+    }) [
+      "narugit/homebrew-tap"
+      "egoist/homebrew-tap"
+      "ProducerGuy/homebrew-tap"
+      "nikitabobko/homebrew-tap"
+    ];
 
     # Lifecycle automation
     onActivation = {
-      autoUpdate = true;        # Update Homebrew itself on rebuild
-      upgrade = true;           # Upgrade installed packages on rebuild
+      autoUpdate = false;       # Keep metadata updates manual
+      upgrade = false;          # Keep package upgrades manual
       cleanup = "uninstall";    # Remove untracked packages on rebuild
     };
 
@@ -98,7 +111,7 @@ in
       "hermes-desktop"
       "codex"
       "nikitabobko/tap/aerospace"
-      "rio"
+      "homebrew/cask/rio"
     ];
 
     brews = [
