@@ -60,14 +60,14 @@
         android-cli = final.callPackage ./pkgs/android-cli.nix { };
       };
 
-      bunVersion = "1.3.14";
+      bunVersion = "1.4.0";
       bunOverlay = final: prev: {
         # nixpkgs is still on 1.3.13.
         bun = prev.bun.overrideAttrs (_: {
           version = bunVersion;
           src = final.fetchurl {
             url = "https://github.com/oven-sh/bun/releases/download/bun-v${bunVersion}/bun-darwin-aarch64.zip";
-            hash = "sha256-2LliIYKK1vl6x6wKt+lYcjQa92MAHogD6CZ2UsJlJiA=";
+            hash = "sha256-xmnpf2Fk4cluBwF0jbmN+ndJKQjL2DlMdVcTSnNd44E=";
           };
         });
       };
