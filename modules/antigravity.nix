@@ -64,6 +64,13 @@ in
       ];
     };
 
+    # Register shared skill dirs outside the default discovery paths
+    ".gemini/config/skills.json".text = builtins.toJSON {
+      entries = [
+        { path = "${config.home.homeDirectory}/.agents/skills"; }
+      ];
+    };
+
     ".gemini/config/hooks.json".text = builtins.toJSON {
       agent-stop-notifier = {
         Stop = [
