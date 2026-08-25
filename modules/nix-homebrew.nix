@@ -40,6 +40,8 @@ in
         "ProducerGuy/tap"
         "nikitabobko/homebrew-tap"
         "nikitabobko/tap"
+        "abue-ammar/homebrew-tinycast"
+        "abue-ammar/tinycast"
       ];
     };
   };
@@ -81,6 +83,7 @@ in
       "egoist/homebrew-tap"
       "ProducerGuy/homebrew-tap"
       "nikitabobko/homebrew-tap"
+      "abue-ammar/homebrew-tinycast"
     ];
 
     # Lifecycle automation
@@ -94,6 +97,8 @@ in
     # OrbStack is pinned by default (no greedy/auto-updates)
     casks = [
       "orbstack"
+      "brave-browser@nightly"
+      "zen"
       "crossover"
       "antigravity"
       "proton-pass"
@@ -106,12 +111,12 @@ in
       "android-studio"
       "qbittorrent"
       "helium-browser"
-      "fluidvoice"
       "telegram"
       "hermes-desktop"
       "codex"
       "nikitabobko/tap/aerospace"
-      "homebrew/cask/rio"
+      "abue-ammar/tinycast/tinycast"
+      "chatgpt"
     ];
 
     brews = [
