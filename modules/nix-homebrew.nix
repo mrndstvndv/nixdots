@@ -40,8 +40,6 @@ in
         "ProducerGuy/tap"
         "nikitabobko/homebrew-tap"
         "nikitabobko/tap"
-        "abue-ammar/homebrew-tinycast"
-        "abue-ammar/tinycast"
       ];
     };
   };
@@ -83,7 +81,6 @@ in
       "egoist/homebrew-tap"
       "ProducerGuy/homebrew-tap"
       "nikitabobko/homebrew-tap"
-      "abue-ammar/homebrew-tinycast"
     ];
 
     # Lifecycle automation
@@ -115,7 +112,6 @@ in
       "hermes-desktop"
       "codex"
       "nikitabobko/tap/aerospace"
-      "abue-ammar/tinycast/tinycast"
       "chatgpt"
     ];
 
