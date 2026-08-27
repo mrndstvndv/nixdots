@@ -33,6 +33,14 @@
 
       set fish_greeting ""
 
+      # Right prompt shows when the previous command finished. Fish draws the
+      # prompt the instant a command completes, so this is the finish time.
+      function fish_right_prompt
+        set_color brblack
+        echo -n (date '+%I:%M %p')
+        set_color normal
+      end
+
       # Desktop notification for long-running commands (>1s)
       function notify_long_cmd --on-event fish_postexec
         if test "$CMD_DURATION" -ge 10000
