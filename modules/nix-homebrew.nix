@@ -113,6 +113,7 @@ in
       "codex"
       "nikitabobko/tap/aerospace"
       "chatgpt"
+      "utm"
     ];
 
     brews = [
