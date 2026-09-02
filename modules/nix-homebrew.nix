@@ -122,6 +122,7 @@ in
       "smctemp"
       "jadx"
       "apktool"
+      "azure-cli"
       "ProducerGuy/tap/thermalforge"
     ];
   };
