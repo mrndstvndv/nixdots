@@ -5,6 +5,9 @@ let
     # approval prompts by default.
     approval_policy = "never"
     sandbox_mode = "danger-full-access"
+
+    [features.context_management]
+    experimental_mode = true
   '';
 in
 {
