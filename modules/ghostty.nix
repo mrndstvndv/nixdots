@@ -18,6 +18,10 @@
 
       font-size = 18;
       custom-shader = "shaders/cursor_warp.glsl";
+      # Let left Option act as Alt so Option+wheel reaches apps with the Alt
+      # modifier bit (pi uses it for accelerated fullscreen scrolling).
+      # Right Option still types special characters.
+      macos-option-as-alt = "left";
     };
   };
 
