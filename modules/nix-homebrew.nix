@@ -112,8 +112,6 @@ in
       "hermes-desktop"
       "codex"
       "nikitabobko/tap/aerospace"
-      "chatgpt"
-      "utm"
     ];
 
     brews = [
