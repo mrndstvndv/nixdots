@@ -1,4 +1,4 @@
-{ lib, pkgs, homebrew-thermalforge, ... }:
+{ lib, pkgs, homebrew-nikitabobko, homebrew-thermalforge, ... }:
 let
   # Upstream thermalforge formula is broken in three ways: requires full
   # Xcode.app (CLT's swift suffices), v0.1.0 tag is missing the icon files,
@@ -8,6 +8,15 @@ let
     cp -r ${homebrew-thermalforge} $out
     chmod -R u+w $out
     cp ${../pkgs/thermalforge.rb} $out/Formula/thermalforge.rb
+  '';
+
+  # Homebrew 6 removed `must_succeed` from install-step `run`, but the
+  # mutable AeroSpace tap still emits it. Keep this tap declarative and patch
+  # the generated cask until upstream catches up.
+  aerospace-tap = pkgs.runCommandLocal "homebrew-tap-nikitabobko" { } ''
+    cp -r ${homebrew-nikitabobko} $out
+    chmod -R u+w $out
+    cp ${../pkgs/aerospace.rb} $out/Casks/aerospace.rb
   '';
 in
 {
@@ -20,9 +29,10 @@ in
     # User owning the Homebrew prefix
     user = "steven";
 
-    # Keep only the patched tap in Nix. Homebrew owns the other clones so
-    # `brew update` can advance their metadata without changing the flake.
+    # Keep patched taps in Nix. Homebrew owns the other clones so `brew update`
+    # can advance their metadata without changing the flake.
     taps = {
+      "nikitabobko/homebrew-tap" = aerospace-tap;
       "ProducerGuy/homebrew-tap" = thermalforge-tap;
     };
 
@@ -68,8 +78,8 @@ in
     global.autoUpdate = true;
 
     # Keep third-party tap membership declarative while leaving repository
-    # contents to Homebrew, except for the locally patched ThermalForge tap
-    # above. Core and cask metadata come from Homebrew's API.
+    # contents to Homebrew, except for the locally patched taps above. Core
+    # and cask metadata come from Homebrew's API.
     taps = builtins.map (name: {
       inherit name;
       # Without this, brew bundle's cleanup does `Trust.replace!` on every
