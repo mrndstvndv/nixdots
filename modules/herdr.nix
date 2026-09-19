@@ -3,8 +3,8 @@ let
   tabBarStatus = if pkgs.stdenv.isDarwin then ''
     tab_bar_right = [
       { type = "command", command = "/opt/homebrew/bin/smctemp -c | sed 's/$/°/'", interval_seconds = 2, timeout_seconds = 2 },
-      { type = "command", command = "used=$(vm_stat | awk '/page size of/ { page_size = $8 } /^Pages active:/ { active = $3 } /^Pages wired down:/ { wired = $4 } /^Pages purgeable:/ { purgeable = $2 } /^Pages occupied by compressor:/ { compressed = $5 } END { printf \"%.0fG\", (active + wired + compressed - purgeable) * page_size / 1024 / 1024 / 1024 }'); total=$(sysctl -n hw.memsize); echo RAM:$used/$((total / 1024 / 1024 / 1024))G", interval_seconds = 2, timeout_seconds = 2 },
-      { type = "command", command = "sysctl -n vm.swapusage | sed -E 's|.*total *= *([^ ]+) +used *= *([^ ]+).*|SW:\\2/\\1|'", interval_seconds = 2, timeout_seconds = 2 },
+      { type = "command", command = "used=$(vm_stat | awk '/page size of/ { page_size = $8 } /^Pages active:/ { active = $3 } /^Pages wired down:/ { wired = $4 } /^Pages purgeable:/ { purgeable = $2 } /^Pages occupied by compressor:/ { compressed = $5 } END { printf \"%.0fG\", (active + wired + compressed - purgeable) * page_size / 1024 / 1024 / 1024 }'); total=$(sysctl -n hw.memsize); echo $used/$((total / 1024 / 1024 / 1024))G", interval_seconds = 2, timeout_seconds = 2 },
+      { type = "command", command = "sysctl -n vm.swapusage | awk '{ if ($6 + 0 > 0) print $6 \"/\" $3 }'", interval_seconds = 2, timeout_seconds = 2 },
     ]
     tab_bar_right_separator = " | "
   '' else "";
