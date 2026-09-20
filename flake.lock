@@ -215,11 +215,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789598997,
-        "narHash": "sha256-dR/qs0ydxtNd4JN9sLFzMI2cR/vlCFrgntsCEBFwVUc=",
+        "lastModified": 1789863097,
+        "narHash": "sha256-0RUo+5LyZ5iwOjezQDO84lWTV5ey4pHhNLQTJHHC5d4=",
         "owner": "mrndstvndv",
         "repo": "pi-coding-agent-flake",
-        "rev": "48ca4672bd8ff740002d7d91e14b25a51af25b03",
+        "rev": "f8f812ac3a7afe09d3d7dbdd8feec92c2ae53a23",
         "type": "github"
       },
       "original": {
