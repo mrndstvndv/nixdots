@@ -116,6 +116,7 @@ in
       "telegram"
       "codex"
       "nikitabobko/tap/aerospace"
+      "kde-connect"
     ];
 
     brews = [
