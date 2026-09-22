@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""GitHub account chooser - pick the active gh account. Auth stays with gh."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HOSTS_FILE = Path(os.environ.get("GH_CONFIG_DIR", Path.home() / ".config" / "gh")) / "hosts.yml"
+
+
+def strip_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
+def parse_hosts(text: str) -> list[dict]:
+    """Read gh's hosts.yml: host section -> users map -> active `user` key."""
+    accounts: list[dict] = []
+    host = ""
+    active = ""
+    logins: list[str] = []
+
+    def flush() -> None:
+        nonlocal logins
+        if not host:
+            return
+        if active and active not in logins:
+            logins.append(active)
+        for login in logins:
+            accounts.append({"login": login, "host": host, "active": login == active})
+        logins = []
+
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        key, separator, value = line.strip().partition(":")
+        if not separator:
+            continue
+        value = strip_quotes(value.strip())
+
+        if indent == 0:
+            flush()
+            host, active = strip_quotes(key), ""
+        elif indent == 4 and key == "user":
+            active = value
+        elif indent == 4 and key == "users":
+            logins = []
+        elif indent == 8 and not value:
+            logins.append(strip_quotes(key))
+    flush()
+    return accounts
+
+
+def load_accounts() -> list[dict]:
+    try:
+        text = HOSTS_FILE.read_text()
+    except OSError:
+        print(f"cannot read {HOSTS_FILE}; run: gh auth login")
+        raise SystemExit(1)
+    accounts = parse_hosts(text)
+    if not accounts:
+        print(f"no accounts in {HOSTS_FILE}; run: gh auth login")
+        raise SystemExit(1)
+    return accounts
+
+
+def format_row(acct: dict) -> str:
+    state = "active" if acct["active"] else ""
+    return f"{acct['login']:<20} {acct['host']:<12} {state}"
+
+
+def choose_fzf(rows: list[str]) -> str | None:
+    # fzf draws its UI on stderr, selection lands on stdout
+    result = subprocess.run(
+        ["fzf", "--layout=reverse", "--height=40%", "--prompt=gh account > ",
+         "--header=enter: switch  esc: cancel"],
+        input="\n".join(rows),
+        stdout=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() or None
+
+
+def choose_numbered(rows: list[str]) -> str | None:
+    for index, row in enumerate(rows, 1):
+        print(f"{index}) {row}")
+    try:
+        pick = input("select account: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
+    if not pick.isdigit() or not 1 <= int(pick) <= len(rows):
+        return None
+    return rows[int(pick) - 1]
+
+
+def choose(rows: list[str]) -> str | None:
+    if shutil.which("fzf"):
+        return choose_fzf(rows)
+    return choose_numbered(rows)
+
+
+def switch(acct: dict) -> None:
+    if not shutil.which("gh"):
+        print("gh CLI not found; install it first")
+        raise SystemExit(1)
+    result = subprocess.run(
+        ["gh", "auth", "switch", "--hostname", acct["host"], "--user", acct["login"]],
+        check=False,
+    )
+    raise SystemExit(result.returncode)
+
+
+def cmd_help() -> None:
+    print("GitHub account chooser - auth handled by gh")
+    print()
+    print("Usage:")
+    print("  gh-choose        interactive chooser (fzf, numbered menu without it)")
+    print("  gh-choose list   list accounts without switching")
+    print("  gh-choose help   show this help")
+    print()
+    print(f"Accounts are read from {HOSTS_FILE} (no network access);")
+    print("switching runs gh auth switch.")
+    print()
+    print("Add accounts with: gh auth login")
+
+
+def main(argv: list[str]) -> None:
+    command = argv[0] if argv else ""
+
+    if command in {"-h", "--help", "help"}:
+        cmd_help()
+        return
+
+    accounts = load_accounts()
+
+    if command in {"-l", "--list", "list"}:
+        for acct in accounts:
+            print(format_row(acct))
+        return
+
+    if command:
+        print(f"unknown command: {command}")
+        cmd_help()
+        raise SystemExit(1)
+
+    rows = [format_row(acct) for acct in accounts]
+    chosen = choose(rows)
+    if not chosen:
+        print("cancelled")
+        raise SystemExit(0)
+
+    acct = accounts[rows.index(chosen)]
+    if acct["active"]:
+        print(f"already active: {acct['login']}")
+        return
+    switch(acct)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

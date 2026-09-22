@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 let
   tabBarStatus = if pkgs.stdenv.isDarwin then ''
     tab_bar_right = [
@@ -21,6 +21,8 @@ in
 
     [keys]
     settings = ""
+    # pane explorer off; prefix+g is the github chooser
+    goto = ""
     workspace_picker = "prefix+s"
     previous_workspace = "ctrl+J"
     next_workspace = "ctrl+K"
@@ -42,6 +44,13 @@ in
     type = "pane"
     command = "wt exit"
     description = "git worktree manager"
+
+    [[keys.command]]
+    key = "prefix+g"
+    type = "pane"
+    # absolute path: herdr daemon PATH has no ~/.config/nixdots/bin
+    command = "${config.home.homeDirectory}/.config/nixdots/bin/gh-choose"
+    description = "github account chooser"
 
     [ui.toast]
     delivery = "terminal"
