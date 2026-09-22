@@ -12,6 +12,7 @@
       ../modules/rio.nix
       ../modules/codex.nix
       ./aerospace.nix
+      ../modules/hm-activation-fixes.nix
     ];
 
   home.packages = [
