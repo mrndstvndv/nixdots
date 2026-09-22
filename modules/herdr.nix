@@ -42,7 +42,8 @@ in
     [[keys.command]]
     key = "prefix+t"
     type = "pane"
-    command = "wt exit"
+    # absolute path: herdr daemon PATH has no ~/.config/nixdots/bin
+    command = "${config.home.homeDirectory}/.config/nixdots/bin/wt exit"
     description = "git worktree manager"
 
     [[keys.command]]
