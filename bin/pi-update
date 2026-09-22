@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Update pi with a home-manager-only activation.
+#
+# Skips sudo, `brew bundle`, and the full darwin system activation that
+# `darwin-rebuild switch` always runs. Safe because piAgent only touches
+# home.packages / home.file / home.activation. Anything system-level still
+# needs `darwin-rebuild switch`.
+set -euo pipefail
+
+host="proputer"
+user="steven"
+
+flake_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$flake_dir"
+
+nix flake update piAgent
+
+activation="$(nix build \
+  ".#darwinConfigurations.${host}.config.home-manager.users.${user}.home.activationPackage" \
+  --out-link result-hm --print-out-paths)"
+
+HOME_MANAGER_BACKUP_EXT=backup "${activation}/activate" --driver-version 1
