@@ -24,5 +24,9 @@
   # Darwin-specific bun and fish config
   custom.bun.installDir = "/Volumes/realme/.bun";
 
+  # macOS ships its own man, so HM 26.05+ leaves programs.man.package null on
+  # Darwin, making fish's mkDefault generateCaches=true a no-op (and warn).
+  programs.man.generateCaches = false;
+
   home.stateVersion = "26.05";
 }
