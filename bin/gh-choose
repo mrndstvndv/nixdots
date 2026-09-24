@@ -68,7 +68,8 @@ def load_accounts() -> list[dict]:
     if not accounts:
         print(f"no accounts in {HOSTS_FILE}; run: gh auth login")
         raise SystemExit(1)
-    return accounts
+    # active last: the fzf cursor starts on the top row, i.e. a switchable account
+    return sorted(accounts, key=lambda acct: acct["active"])
 
 
 def format_row(acct: dict) -> str:
