@@ -23,7 +23,7 @@
     pkgs.unzip
     pkgs.p7zip
     pkgs.neovim
-    pkgs.jdk17_headless
+    pkgs.jdk21_headless
     pkgs.cargo
     pkgs.rustc
     pkgs.rustPlatform.rustLibSrc
