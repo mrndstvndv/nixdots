@@ -116,6 +116,7 @@ in
       "telegram"
       "codex"
       "nikitabobko/tap/aerospace"
+      "claude-code"
       "kde-connect"
     ];
 
@@ -127,6 +128,7 @@ in
       "apktool"
       "azure-cli"
       "ProducerGuy/tap/thermalforge"
+      "oci-cli"
     ];
   };
 
