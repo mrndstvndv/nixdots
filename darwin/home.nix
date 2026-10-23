@@ -9,7 +9,6 @@
       ../modules/tmux.nix
       ../modules/packages-common.nix
       ../modules/packages-gui.nix
-      ../modules/rio.nix
       ../modules/codex.nix
       ./aerospace.nix
       ../modules/hm-activation-fixes.nix
