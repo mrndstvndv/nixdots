@@ -116,13 +116,13 @@ in
       "telegram"
       "codex"
       "nikitabobko/tap/aerospace"
-      "claude-code"
+      "claude-code@latest"
       "kde-connect"
     ];
 
     brews = [
-      "fish"
       "herdr"
+      "go"
       "smctemp"
       "jadx"
       "apktool"

@@ -22,6 +22,7 @@
     pkgs.aria2
     pkgs.unzip
     pkgs.p7zip
+    pkgs.unar
     pkgs.neovim
     pkgs.jdk21_headless
     pkgs.cargo
