@@ -212,19 +212,37 @@
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "piMonorepo": "piMonorepo"
       },
       "locked": {
-        "lastModified": 1790045246,
-        "narHash": "sha256-7p97QBuqYG3w169wOaPwTy+/ZQehGE/Bm/1EJe/BiS4=",
+        "lastModified": 1792628831,
+        "narHash": "sha256-A288psKVoXutCGidwafn6PA3Xis0zA/3xSoh+A8I/fc=",
         "owner": "mrndstvndv",
         "repo": "pi-coding-agent-flake",
-        "rev": "a15c9cc02e5bb42b1edbc5424b6c255a8f39e1a2",
+        "rev": "e75064b9971ae0a0f1f146aeed89c2255290bf3b",
         "type": "github"
       },
       "original": {
         "owner": "mrndstvndv",
         "repo": "pi-coding-agent-flake",
+        "type": "github"
+      }
+    },
+    "piMonorepo": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790880741,
+        "narHash": "sha256-CGznIVHXG6gr2F8vzHcR/v4P9xJgZHeMTt/CJ/kB78o=",
+        "owner": "earendil-works",
+        "repo": "pi",
+        "rev": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+        "type": "github"
+      },
+      "original": {
+        "owner": "earendil-works",
+        "ref": "v1.0.0",
+        "repo": "pi",
         "type": "github"
       }
     },

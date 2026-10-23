@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+# Run the GitHub Copilot CLI against Command Code models via BYOK.
+#
+# Command Code serves models over OpenAI- and Anthropic-compatible endpoints.
+# Copilot resolves agent capabilities (tool support, token limits, prompting)
+# from a "well-known" model catalog, and Command Code's ids (claude-sonnet-4-6,
+# gpt-5.6-sol, deepseek/...) are not in it. This wrapper maps each id onto a
+# provider type, a well-known base id for capabilities, and the correct wire API.
+set -euo pipefail
+
+readonly PROVIDER_BASE='https://api.commandcode.ai/provider'
+readonly MODELS_URL="${PROVIDER_BASE}/v1/models"
+readonly KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/copilot-cmd/key"
+readonly DEFAULT_MODEL='deepseek/deepseek-v4.1-flash'
+# Used only when a model has no well-known base id, so the agent's "safe
+# defaults" don't cap a frontier model's context window.
+readonly DEFAULT_MAX_PROMPT_TOKENS=128000
+readonly DEFAULT_MAX_OUTPUT_TOKENS=16384
+
+die() {
+  printf 'copilot-cmd: %s\n' "$*" >&2
+  exit "${2:-1}"
+}
+
+usage() {
+  cat <<'EOF'
+copilot-cmd — run GitHub Copilot CLI against Command Code (BYOK).
+
+Usage:
+  copilot-cmd [options] [-- copilot args...]
+
+Model:
+  -m, --model MODEL       Command Code model id (default: $COPILOT_CMD_MODEL
+                          or deepseek/deepseek-v4.1-flash)
+  -p, --provider TYPE     openai | anthropic (default: inferred from model id)
+      --model-id ID       Copilot well-known base id for capabilities/token
+                          limits (default: inferred; e.g. claude-sonnet-4)
+      --wire-model NAME   Model name sent to the provider (default: MODEL)
+      --wire-api API      completions | responses (default: responses for
+                          gpt-5/o-series, otherwise completions)
+      --max-prompt-tokens N
+      --max-output-tokens N
+
+Other:
+  -l, --list              List Command Code models and exit
+      --offline           Set COPILOT_OFFLINE=true (no GitHub contact)
+  -n, --dry-run           Print resolved config + command instead of running
+  -h, --help              Show this help
+
+API key lookup (first hit wins):
+  $COPILOT_CMD_API_KEY, $CMD_API_KEY, $COMMANDCODE_API_KEY,
+  ~/.commandcode/auth.json (apiKey), ~/.pi/agent/auth.json (commandcode.*),
+  then <config>/copilot-cmd/key
+
+Unknown flags and args after -- are passed straight to copilot.
+
+Examples:
+  copilot-cmd --list
+  copilot-cmd
+  copilot-cmd -m claude-sonnet-4-6
+  copilot-cmd -m gpt-5.6-sol
+  copilot-cmd -m moonshotai/Kimi-K2.7-Code --model-id gpt-5.4 -- --yolo
+EOF
+}
+
+list_models() {
+  command -v curl >/dev/null || die 'curl is required for --list'
+  local body
+  body="$(curl -fsSL "$MODELS_URL")" || die "failed to fetch $MODELS_URL"
+  command -v python3 >/dev/null || { printf '%s\n' "$body"; return; }
+  printf '%s' "$body" | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+models = data.get("data", data) if isinstance(data, dict) else data
+for model in models:
+    endpoints = ",".join(model.get("supported_endpoints") or [])
+    print("%-42s %s" % (model.get("id", "?"), endpoints))
+'
+}
+
+# Print a nested string field from a JSON file, or nothing if absent.
+read_json_key() {
+  local file="$1" path="$2"
+  [[ -r "$file" ]] || return 1
+  command -v python3 >/dev/null || return 1
+  python3 - "$file" "$path" <<'PY'
+import json, sys
+node = None
+try:
+    with open(sys.argv[1]) as fh:
+        node = json.load(fh)
+    for part in sys.argv[2].split("."):
+        node = node[part]
+except Exception:
+    sys.exit(1)
+if isinstance(node, str) and node.strip():
+    print(node.strip())
+else:
+    sys.exit(1)
+PY
+}
+
+resolve_api_key() {
+  local key="${COPILOT_CMD_API_KEY:-${CMD_API_KEY:-${COMMANDCODE_API_KEY:-}}}"
+  [[ -n "$key" ]] && { printf '%s' "$key"; return; }
+
+  # Command Code's CLI stores the same key it issues for the provider API.
+  local candidate file path
+  for candidate in \
+    "$HOME/.commandcode/auth.json:apiKey" \
+    "$HOME/.pi/agent/auth.json:commandcode.apiKey" \
+    "$HOME/.pi/agent/auth.json:commandcode.key"; do
+    file="${candidate%%:*}"
+    path="${candidate#*:}"
+    key="$(read_json_key "$file" "$path" || true)"
+    [[ -n "$key" ]] && { printf '%s' "$key"; return; }
+  done
+
+  [[ -r "$KEY_FILE" ]] || die "no API key: set \$CMD_API_KEY, log in with the Command Code CLI, or write $KEY_FILE"
+  tr -d '[:space:]' < "$KEY_FILE"
+}
+
+# Set globals: provider, model_id, wire_api. model_id is Copilot's well-known
+# base id used for agent configuration and token limits; empty means "unmapped"
+# and Copilot falls back to safe defaults (we then set explicit token caps).
+classify_model() {
+  local id
+  id="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  provider=''
+  model_id=''
+  wire_api=''
+  case "$id" in
+    claude-opus-*)                  provider=anthropic; model_id='claude-opus-4' ;;
+    claude-sonnet-*|claude-fable-*) provider=anthropic; model_id='claude-sonnet-4' ;;
+    claude-haiku-*)                 provider=anthropic; model_id='claude-sonnet-4' ;;
+    claude*)                        provider=anthropic; model_id='claude-sonnet-4' ;;
+    gpt-5*)                         provider=openai; model_id='gpt-5.4'; wire_api='responses' ;;
+    gpt-4*)                         provider=openai; model_id='gpt-4' ;;
+    o1*|o3*|o4*)                    provider=openai; model_id='gpt-5.4'; wire_api='responses' ;;
+    *)                              provider=openai ;;
+  esac
+}
+
+model="${COPILOT_CMD_MODEL:-$DEFAULT_MODEL}"
+provider_override=''
+model_id_override=''
+wire_model=''
+wire_api_override=''
+max_prompt_tokens=''
+max_output_tokens=''
+offline=false
+dry_run=false
+passthrough=()
+
+while (( $# )); do
+  case "$1" in
+    -m|--model)             model="${2:?--model needs a value}";             shift 2 ;;
+    -p|--provider)          provider_override="${2:?--provider needs a value}"; shift 2 ;;
+    --model-id)             model_id_override="${2:?--model-id needs a value}"; shift 2 ;;
+    --wire-model)           wire_model="${2:?--wire-model needs a value}";   shift 2 ;;
+    --wire-api)             wire_api_override="${2:?--wire-api needs a value}"; shift 2 ;;
+    --max-prompt-tokens)    max_prompt_tokens="${2:?--max-prompt-tokens needs a value}"; shift 2 ;;
+    --max-output-tokens)    max_output_tokens="${2:?--max-output-tokens needs a value}"; shift 2 ;;
+    -l|--list)              list_models; exit 0 ;;
+    --offline)              offline=true; shift ;;
+    -n|--dry-run)           dry_run=true; shift ;;
+    -h|--help)              usage; exit 0 ;;
+    --)                     shift; passthrough+=("$@"); break ;;
+    *)                      passthrough+=("$1"); shift ;;
+  esac
+done
+
+classify_model "$model"
+[[ -n "$provider_override" ]]  && provider="$provider_override"
+[[ -n "$model_id_override" ]]  && model_id="$model_id_override"
+[[ -n "$wire_api_override" ]]  && wire_api="$wire_api_override"
+
+[[ -n "$wire_model" ]] || wire_model="$model"
+
+case "$provider" in
+  anthropic) base_url="$PROVIDER_BASE" ;;      # CLI appends /v1/messages
+  openai)    base_url="$PROVIDER_BASE/v1" ;;   # CLI appends /chat/completions or /responses
+  *)         die "unsupported provider '$provider' (use openai or anthropic)" ;;
+esac
+
+# No well-known id -> Copilot uses safe defaults; raise them explicitly so a
+# frontier model isn't capped to a small context window.
+if [[ -z "$model_id" ]]; then
+  max_prompt_tokens="${max_prompt_tokens:-$DEFAULT_MAX_PROMPT_TOKENS}"
+  max_output_tokens="${max_output_tokens:-$DEFAULT_MAX_OUTPUT_TOKENS}"
+fi
+
+command -v copilot >/dev/null || die 'copilot not found on PATH' 127
+
+api_key="$(resolve_api_key)"
+
+export COPILOT_PROVIDER_TYPE="$provider"
+export COPILOT_PROVIDER_BASE_URL="$base_url"
+export COPILOT_PROVIDER_API_KEY="$api_key"
+export COPILOT_MODEL="$model"
+export COPILOT_PROVIDER_WIRE_MODEL="$wire_model"
+[[ -n "$model_id" ]]           && export COPILOT_PROVIDER_MODEL_ID="$model_id"
+[[ -n "$wire_api" ]]           && export COPILOT_PROVIDER_WIRE_API="$wire_api"
+[[ -n "$max_prompt_tokens" ]]  && export COPILOT_PROVIDER_MAX_PROMPT_TOKENS="$max_prompt_tokens"
+[[ -n "$max_output_tokens" ]]  && export COPILOT_PROVIDER_MAX_OUTPUT_TOKENS="$max_output_tokens"
+[[ "$offline" == true ]]       && export COPILOT_OFFLINE=true
+
+if [[ "$dry_run" == true ]]; then
+  printf 'provider=%s  model=%s  model_id=%s  wire_model=%s  wire_api=%s  offline=%s\n' \
+    "$provider" "$model" "${model_id:-<none>}" "$wire_model" "${wire_api:-completions}" "$offline"
+  printf 'base_url=%s\n' "$base_url"
+  printf 'prompt_tokens=%s  output_tokens=%s\n' \
+    "${max_prompt_tokens:-<catalog>}" "${max_output_tokens:-<catalog>}"
+  printf 'exec copilot %s\n' "${passthrough[*]-}"
+  exit 0
+fi
+
+exec copilot ${passthrough[@]+"${passthrough[@]}"}

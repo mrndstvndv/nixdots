@@ -6,6 +6,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import getpass
+import ipaddress
 import json
 import math
 import os
@@ -625,6 +626,69 @@ def cmd_band(args: list[str]) -> None:
     print(pretty_json(goform_post(f"goformId=TZ_SET_LOCK_BAND&{payload}")))
 
 
+RESERVATION_GET_CMD = "GLOBE_GET_MAC_IP_BINDING"
+RESERVATION_SET_ID = "GLOBE_MAC_IP_BINDING"
+
+
+def normalize_mac(value: str) -> str:
+    mac = value.strip().lower().replace("-", ":")
+    if not re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", mac):
+        raise SystemExit(f"Invalid MAC address: {value}")
+    return mac
+
+
+def normalize_ip(value: str) -> str:
+    try:
+        return str(ipaddress.IPv4Address(value.strip()))
+    except ValueError:
+        raise SystemExit(f"Invalid IPv4 address: {value}")
+
+
+def get_reservations() -> list[dict]:
+    text = http_post("/goform/goform_get_cmd_process", f"cmd={RESERVATION_GET_CMD}&isTest=false")
+    return json.loads(text).get("tz_static_ip_mac") or []
+
+
+def save_reservations(entries: list[dict]) -> None:
+    # The router replaces the whole list on every save, so always send the full list.
+    payload = {"goformId": RESERVATION_SET_ID, "isTest": False, "tz_static_ip_mac": entries}
+    result = json.loads(http_post("/goform/goform_set_cmd_process", json.dumps(payload)))
+    if result.get("result") != "success":
+        raise SystemExit(f"{RED}Router rejected the reservation change: {result}{NC}")
+
+
+def cmd_reservation(args: list[str]) -> None:
+    action = args[0] if args else "list"
+    ensure_login()
+    entries = get_reservations()
+
+    if action == "list" and len(args) <= 1:
+        print(json.dumps(entries, indent=2))
+        return
+
+    if action == "add" and len(args) == 3:
+        mac, ip = normalize_mac(args[1]), normalize_ip(args[2])
+        for entry in entries:
+            if entry["mac"].lower() == mac or entry["ip"] == ip:
+                raise SystemExit(f"{RED}Already reserved: {entry['mac']} -> {entry['ip']}{NC}")
+        entries.append({"ip": ip, "mac": mac, "status": "static"})
+        save_reservations(entries)
+        print(f"{GREEN}Reserved {ip} for {mac}.{NC}")
+        return
+
+    if action in {"remove", "rm"} and len(args) == 2:
+        target = args[1].strip().lower().replace("-", ":")
+        kept = [entry for entry in entries if target not in {entry["mac"].lower(), entry["ip"]}]
+        if len(kept) == len(entries):
+            raise SystemExit(f"{RED}No reservation matches {args[1]}{NC}")
+        save_reservations(kept)
+        print(f"{GREEN}Removed reservation for {args[1]}.{NC}")
+        return
+
+    print("Usage: reservation [list] | add <mac> <ip> | remove <mac|ip>")
+    raise SystemExit(1)
+
+
 def cmd_help() -> None:
     print("Globe Router CLI - Commands:")
     print()
@@ -640,6 +704,7 @@ def cmd_help() -> None:
     print("  connect     - Connect WAN")
     print("  disconnect  - Disconnect WAN")
     print("  band        - Show or set LTE band lock")
+    print("  reservation - List, add, or remove static DHCP reservations")
     print("  raw <cmd>   - Execute custom command")
     print()
     print("Options:")
@@ -708,6 +773,8 @@ def main(argv: list[str]) -> None:
         cmd_wan_connect("disconnect")
     elif command == "band":
         cmd_band(args)
+    elif command == "reservation":
+        cmd_reservation(args)
     elif command == "raw":
         cmd_raw(args)
     elif command in {"help", "--help", "-h"}:

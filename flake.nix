@@ -179,7 +179,16 @@
 
       # Enable alternative shell support in nix-darwin.
       programs.fish.enable = true;
-      environment.shells = [ pkgs.fish ];
+      # Login shell path that doesn't live under /run. /run/current-system is
+      # recreated by the activate-system boot job, which has been failing.
+      environment.shells = [ pkgs.fish "/Users/steven/.nix-profile/bin/fish" ];
+
+      # The activate-system boot job discards its stderr. Log it so the next
+      # failure can be read.
+      launchd.daemons.activate-system.serviceConfig = {
+        StandardErrorPath = "/var/log/activate-system.log";
+        StandardOutPath = "/var/log/activate-system.log";
+      };
 
       # Set Git commit hash for darwin-version.
       system.configurationRevision = self.rev or self.dirtyRev or null;
