@@ -5,6 +5,8 @@
     UV_CACHE_DIR = "/Volumes/realme/.cache/uv";
     GRADLE_USER_HOME = "/Volumes/realme/.gradle";
     ANDROID_HOME = "/Volumes/realme/Dev/AndroidSdk";
+    # termux-ghostty (Ghostty bcfe577+) needs Zig 0.17; its Gradle build reads this.
+    ZIG_EXECUTABLE = "/Users/steven/.local/bin/zig-0.17";
   };
 
   programs.fish = {
