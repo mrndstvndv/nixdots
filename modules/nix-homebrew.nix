@@ -104,6 +104,7 @@ in
     # OrbStack is pinned by default (no greedy/auto-updates)
     casks = [
       "orbstack"
+      "obsidian"
       "brave-browser@nightly"
       "crossover"
       "proton-pass"

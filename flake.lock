@@ -216,11 +216,11 @@
         "piMonorepo": "piMonorepo"
       },
       "locked": {
-        "lastModified": 1792628831,
-        "narHash": "sha256-A288psKVoXutCGidwafn6PA3Xis0zA/3xSoh+A8I/fc=",
+        "lastModified": 1793027314,
+        "narHash": "sha256-Ik/4LSC9iLn5t8CYQs4b83RIUo0Sy7/jcOnf68aS2aA=",
         "owner": "mrndstvndv",
         "repo": "pi-coding-agent-flake",
-        "rev": "e75064b9971ae0a0f1f146aeed89c2255290bf3b",
+        "rev": "e0d0022f2531e560f7ebfc05ded2a5c2b7d674f4",
         "type": "github"
       },
       "original": {
